@@ -78,11 +78,11 @@
     // ⚠️ ضع رابط الـ Web App الخاص بك المنتهي بـ /exec هنا
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziJcn4cEHogawYRUCUXdTiagHcpnBljjzvlHl2JOpOdoyY_wDf-ak5F_Pa5G6xJL-d2Q/exec";
 
-    if (!localStorage.getItem('app_reset_v12')) {
+    if (!localStorage.getItem('app_reset_v13')) {
         localStorage.removeItem('offline_attendance');
         localStorage.removeItem('cached_emp_names');
         localStorage.setItem('successful_sent_count', '0');
-        localStorage.setItem('app_reset_v12', 'true');
+        localStorage.setItem('app_reset_v13', 'true');
     }
 
     function getDeviceId() {
@@ -114,7 +114,6 @@
     let isEmpValid = false;
     let isGpsValid = false;
 
-    // الميزة الجديدة: مزامنة جدول الموظفين كاملاً بالذاكرة أثناء الاتصال
     async function preloadAllEmployees() {
         if (!navigator.onLine) return;
         try {
@@ -197,7 +196,7 @@
     window.addEventListener('offline', updateUI);
     updateUI();
 
-    // فحص الرقم أونلاين وأوفلاين فورياً
+    // البحث مع تثبيت النتيجة فور مطابقتها محلياً
     empInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         const empId = empInput.value.trim();
@@ -211,7 +210,7 @@
             return;
         }
 
-        // قراءة الذاكرة المؤقتة (الكاش المحلي) أولاً - تعمل في الأوفلاين والأونلاين
+        // 1. الفحص من الذاكرة المحلية أولاً
         const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
         if (cachedNames[empId] && cachedNames[empId].name) {
             const info = cachedNames[empId];
@@ -225,33 +224,40 @@
             empNameDisplay.style.color = '#0369a1';
             empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
             checkFormValidity();
-            return;
+            return; // إنهاء الدالة فوراً لمنع أي استدعاء خلفي قد يلغي النتيجة
         }
 
-        // إذا كان أوفلاين والرقم غير مخزن
+        // 2. إذا لم يجد الاسم بالذاكرة وكان أوفلاين
         if (!navigator.onLine) {
             isEmpValid = false;
             empNameDisplay.style.display = 'block';
             empNameDisplay.style.color = '#991b1b';
-            empNameDisplay.innerText = '❌ الرقم غير محفوط بالذاكرة (يتطلب نت لمرة واحدة)';
+            empNameDisplay.innerText = '❌ الرقم غير محفوظ بالذاكرة (يتطلب نت لمرة واحدة)';
             checkFormValidity();
             return;
         }
 
+        // 3. البحث من السيرفر فقط إذا لم يُعثر عليه في الكاش المحفوط
         empNameDisplay.style.display = 'block';
         empNameDisplay.style.color = '#334155';
         empNameDisplay.innerText = '⏳ جاري التحقق من الرقم الوظيفي...';
 
         debounceTimer = setTimeout(() => {
             fetchEmployeeNameAuto(empId);
-        }, 300);
+        }, 400);
     });
 
     async function fetchEmployeeNameAuto(empId) {
+        // حماية إضافية: لو أصبحت الحالة مؤكدة محلياً أثناء الانتظار، يتوقف
+        if (isEmpValid && empInput.value.trim() === empId) return;
+
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getEmpName&empId=${encodeURIComponent(empId)}`);
             const data = await response.json();
             
+            // التأكد أن الرقم المدخل حالياً هو نفسه الذي تم طلب الفحص له لم تفارق الخانة
+            if (empInput.value.trim() !== empId) return;
+
             const nameFound = data.empName || data.name;
 
             if (data.success && nameFound && nameFound !== "undefined") {
@@ -265,7 +271,6 @@
                 empNameDisplay.style.color = '#0369a1';
                 empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
 
-                // حفظ في الكاش لتسهيل الأوفلاين مستقبلاً
                 const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
                 cachedNames[empId] = { name: verifiedEmpName, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
                 localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
@@ -278,10 +283,12 @@
                 empNameDisplay.innerText = '❌ الرقم الوظيفي غير موجود بقاعدة البيانات!';
             }
         } catch (e) {
-            isEmpValid = false;
-            empNameDisplay.style.display = 'block';
-            empNameDisplay.style.color = '#991b1b';
-            empNameDisplay.innerText = '❌ تعذر التحقق من السيرفر حالياً';
+            if (empInput.value.trim() === empId && !isEmpValid) {
+                isEmpValid = false;
+                empNameDisplay.style.display = 'block';
+                empNameDisplay.style.color = '#991b1b';
+                empNameDisplay.innerText = '❌ تعذر التحقق من السيرفر حالياً';
+            }
         }
         checkFormValidity();
     }
