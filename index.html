@@ -76,14 +76,13 @@
 
 <script>
     // ⚠️ ضع رابط الـ Web App الخاص بك المنتهي بـ /exec هنا
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXyPXP8ANtEKyXOdp5fTMFq3K8JwZ5MSEXyzJflTGDrT_PCqzOK1Qm1MLTAlE00-DNPw/exec";
+    const SCRIPT_URL = "ضع_رابط_APPS_SCRIPT_هنا_المنتهي_بـ_exec";
 
-    // تنظيف الكاش القديم لتفادي قراءة القيم الخاطئة المخزنة سابقاً
-    if (!localStorage.getItem('app_reset_v11')) {
+    if (!localStorage.getItem('app_reset_v12')) {
         localStorage.removeItem('offline_attendance');
         localStorage.removeItem('cached_emp_names');
         localStorage.setItem('successful_sent_count', '0');
-        localStorage.setItem('app_reset_v11', 'true');
+        localStorage.setItem('app_reset_v12', 'true');
     }
 
     function getDeviceId() {
@@ -114,6 +113,19 @@
 
     let isEmpValid = false;
     let isGpsValid = false;
+
+    // الميزة الجديدة: مزامنة جدول الموظفين كاملاً بالذاكرة أثناء الاتصال
+    async function preloadAllEmployees() {
+        if (!navigator.onLine) return;
+        try {
+            const res = await fetch(`${SCRIPT_URL}?action=getAllEmployees`);
+            const data = await res.json();
+            if (data.success && data.employees) {
+                localStorage.setItem('cached_emp_names', JSON.stringify(data.employees));
+            }
+        } catch (e) {}
+    }
+    preloadAllEmployees();
 
     function autoFetchLocation() {
         gpsDisplay.innerText = "⏳ جاري تحديد موقع الـ GPS تلقائياً...";
@@ -174,6 +186,7 @@
 
     window.addEventListener('online', async () => {
         updateUI();
+        preloadAllEmployees();
         const pendingList = getOfflineRecords();
         if (pendingList.length > 0) {
             showStatus("⚡ تم استعادة الاتصال! جاري رفع الحركات المعلقة...", "warning");
@@ -184,6 +197,7 @@
     window.addEventListener('offline', updateUI);
     updateUI();
 
+    // فحص الرقم أونلاين وأوفلاين فورياً
     empInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         const empId = empInput.value.trim();
@@ -197,6 +211,7 @@
             return;
         }
 
+        // قراءة الذاكرة المؤقتة (الكاش المحلي) أولاً - تعمل في الأوفلاين والأونلاين
         const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
         if (cachedNames[empId] && cachedNames[empId].name) {
             const info = cachedNames[empId];
@@ -213,6 +228,16 @@
             return;
         }
 
+        // إذا كان أوفلاين والرقم غير مخزن
+        if (!navigator.onLine) {
+            isEmpValid = false;
+            empNameDisplay.style.display = 'block';
+            empNameDisplay.style.color = '#991b1b';
+            empNameDisplay.innerText = '❌ الرقم غير محفوط بالذاكرة (يتطلب نت لمرة واحدة)';
+            checkFormValidity();
+            return;
+        }
+
         empNameDisplay.style.display = 'block';
         empNameDisplay.style.color = '#334155';
         empNameDisplay.innerText = '⏳ جاري التحقق من الرقم الوظيفي...';
@@ -223,15 +248,6 @@
     });
 
     async function fetchEmployeeNameAuto(empId) {
-        if (!navigator.onLine) {
-            empNameDisplay.style.display = 'block';
-            empNameDisplay.style.color = '#854d0e';
-            empNameDisplay.innerText = 'أوفلاين (سيتم التسجيل بالرقم والمطابقة لاحقاً)';
-            isEmpValid = true; 
-            checkFormValidity();
-            return;
-        }
-
         try {
             const response = await fetch(`${SCRIPT_URL}?action=getEmpName&empId=${encodeURIComponent(empId)}`);
             const data = await response.json();
@@ -249,6 +265,7 @@
                 empNameDisplay.style.color = '#0369a1';
                 empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
 
+                // حفظ في الكاش لتسهيل الأوفلاين مستقبلاً
                 const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
                 cachedNames[empId] = { name: verifiedEmpName, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
                 localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
