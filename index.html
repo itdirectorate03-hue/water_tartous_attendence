@@ -75,13 +75,15 @@
 </div>
 
 <script>
-    // ⚠️ استبدل هذا الرابط برابط الـ Web App الخاص بك المنتهي بـ /exec
+    // ⚠️ ضع رابط الـ Web App الخاص بك المنتهي بـ /exec هنا
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXyPXP8ANtEKyXOdp5fTMFq3K8JwZ5MSEXyzJflTGDrT_PCqzOK1Qm1MLTAlE00-DNPw/exec";
 
-    if (!localStorage.getItem('app_reset_v10')) {
+    // تنظيف الكاش القديم لتفادي قراءة القيم الخاطئة المخزنة سابقاً
+    if (!localStorage.getItem('app_reset_v11')) {
         localStorage.removeItem('offline_attendance');
+        localStorage.removeItem('cached_emp_names');
         localStorage.setItem('successful_sent_count', '0');
-        localStorage.setItem('app_reset_v10', 'true');
+        localStorage.setItem('app_reset_v11', 'true');
     }
 
     function getDeviceId() {
@@ -113,7 +115,6 @@
     let isEmpValid = false;
     let isGpsValid = false;
 
-    // جلب موقع الـ GPS تلقائياً فور التحميل
     function autoFetchLocation() {
         gpsDisplay.innerText = "⏳ جاري تحديد موقع الـ GPS تلقائياً...";
         gpsDisplay.style.color = "#334155";
@@ -147,7 +148,6 @@
 
     autoFetchLocation();
 
-    // عدم تفعيل الزر إلا عند المطابقة التامة للاسم والـ GPS
     function checkFormValidity() {
         if (isEmpValid === true && isGpsValid === true && empInput.value.trim() !== "") {
             submitBtn.disabled = false;
@@ -184,7 +184,6 @@
     window.addEventListener('offline', updateUI);
     updateUI();
 
-    // فحص الرقم الوظيفي ومطابقته
     empInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         const empId = empInput.value.trim();
@@ -199,7 +198,7 @@
         }
 
         const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
-        if (cachedNames[empId]) {
+        if (cachedNames[empId] && cachedNames[empId].name) {
             const info = cachedNames[empId];
             verifiedEmpName = info.name;
             empDept = info.dept || "";
@@ -237,8 +236,10 @@
             const response = await fetch(`${SCRIPT_URL}?action=getEmpName&empId=${encodeURIComponent(empId)}`);
             const data = await response.json();
             
-            if (data.success && data.name) {
-                verifiedEmpName = data.name;
+            const nameFound = data.empName || data.name;
+
+            if (data.success && nameFound && nameFound !== "undefined") {
+                verifiedEmpName = nameFound;
                 empDept = data.dept || "";
                 empJobType = data.jobType || "";
                 empWorkPlace = data.workPlace || "";
@@ -246,10 +247,10 @@
                 isEmpValid = true;
                 empNameDisplay.style.display = 'block';
                 empNameDisplay.style.color = '#0369a1';
-                empNameDisplay.innerText = `👤 الموظف: ${data.name}`;
+                empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
 
                 const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
-                cachedNames[empId] = { name: data.name, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
+                cachedNames[empId] = { name: verifiedEmpName, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
                 localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
 
             } else {
@@ -268,7 +269,6 @@
         checkFormValidity();
     }
 
-    // إرسال الحضور
     document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
