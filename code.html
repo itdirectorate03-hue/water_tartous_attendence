@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>شركة مياه طرطوس - رابط الدوام</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 15px;
+    }
+    .card {
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+    }
+    h2 {
+      margin-top: 0;
+      color: #1e293b;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+      text-align: right;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #475569;
+      font-size: 14px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      box-sizing: border-box;
+      font-size: 16px;
+      text-align: center;
+    }
+    .emp-name-box {
+      background-color: #f1f5f9;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 15px;
+      color: #1e293b;
+      min-height: 20px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .count-subtext {
+      font-size: 13px;
+      color: #475569;
+      font-weight: normal;
+      margin-top: 4px;
+    }
+    .coords-box {
+      background-color: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 13px;
+      color: #166534;
+      text-align: right;
+      direction: ltr;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #94a3b8;
+      cursor: not-allowed;
+    }
+    .offline-status-box {
+      display: none;
+      background-color: #fff7ed;
+      border: 1px solid #ffedd5;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 15px;
+      font-size: 13px;
+      color: #c2410c;
+      text-align: center;
+    }
+    .offline-badge {
+      background-color: #ea580c;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+      margin: 0 4px;
+    }
+    #resultMessage {
+      margin-top: 15px;
+      font-size: 15px;
+      font-weight: bold;
+      color: #059669;
+    }
+    .error-msg {
+      color: #dc2626 !important;
+    }
+    .footer-credits {
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>شركة مياه طرطوس - رابط الدوام</h2>
+    
+    <div class="form-group">
+      <label for="empId">الرقم الوظيفي:</label>
+      <input type="text" id="empId" placeholder="أدخل رقمك الوظيفي" oninput="checkEmpName()" autocomplete="off">
+    </div>
+
+    <!-- مربع عرض الاسم وعدد التسجيلات الكلي -->
+    <div id="empNameDisplay" class="emp-name-box">أدخل الرقم للتحقق من الاسم...</div>
+
+    <!-- مربع عرض الإحداثيات -->
+    <div id="coordsDisplay" class="coords-box">جاري تحديد الموقع الجغرافي...</div>
+
+    <!-- زر تأكيد الحضور -->
+    <button id="submitBtn" onclick="sendAttendanceData()" disabled>تأكيد وتسجيل الحضور</button>
+
+    <div id="resultMessage"></div>
+
+    <!-- عداد حركات الأوفلاين -->
+    <div id="offlineStatusBox" class="offline-status-box">
+      يوجد <span id="offlineCount" class="offline-badge">0</span> تسجيلات محفوظة أوفلاين.
+      <br><small>سيتم رفعها تلقائياً عند توفر الإنترنت.</small>
+    </div>
+
+    <!-- التوقيع الرسمي -->
+    <div class="footer-credits">
+      تم تصميم هذا الرابط من قبل مديرية المعلوماتية - شركة مياه طرطوس
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzILx6MZEODtHKUnFYWTLhLwXhx5diZVhkxYrrvx7O7rqZSMH17IFPGOqbv16Y662NU8g/exec";
+    let debounceTimer;
+    
+    let currentLat = null;
+    let currentLng = null;
+    let isNameVerified = false;
+
+    // توليد أو جلب معرّف الجهاز الفريد (Device ID)
+    function getOrCreateDeviceId() {
+      let deviceId = localStorage.getItem('app_device_id');
+      if (!deviceId) {
+        deviceId = 'DEV-' + Math.random().toString(36).substring(2, 9).toUpperCase() + '-' + Date.now().toString(36).toUpperCase();
+        localStorage.setItem('app_device_id', deviceId);
+      }
+      return deviceId;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchGPSLocationOnLoad();
+      updateOfflineCounter();
+      cacheEmployeesList();
+      autoSyncOfflineData();
+    });
+
+    // رفع تلقائي فور عودة الشبكة دون الحاجة لتحديث الصفحة
+    window.addEventListener('online', () => {
+      cacheEmployeesList();
+      autoSyncOfflineData();
+    });
+
+    function cacheEmployeesList() {
+      if (!navigator.onLine) return;
+      fetch(SCRIPT_URL + "?action=getAllEmployees")
+        .then(res => res.json())
+        .then(data => {
+          if (data.result === "success" && data.employees) {
+            localStorage.setItem('cached_employees', JSON.stringify(data.employees));
+          }
+        })
+        .catch(() => {});
+    }
+
+    function fetchGPSLocationOnLoad() {
+      const coordsDisplay = document.getElementById('coordsDisplay');
+
+      if (!navigator.geolocation) {
+        coordsDisplay.style.backgroundColor = "#fef2f2";
+        coordsDisplay.style.borderColor = "#fecaca";
+        coordsDisplay.style.color = "#991b1b";
+        coordsDisplay.innerText = "خدمة الـ GPS غير مدعومة في جهازك";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          currentLat = position.coords.latitude;
+          currentLng = position.coords.longitude;
+
+          if (currentLat && currentLng) {
+            coordsDisplay.style.backgroundColor = "#f0fdf4";
+            coordsDisplay.style.borderColor = "#bbf7d0";
+            coordsDisplay.style.color = "#166534";
+            coordsDisplay.innerHTML = `<strong>GPS Location:</strong><br>Lat: ${currentLat.toFixed(6)}<br>Lng: ${currentLng.toFixed(6)}`;
+            validateFormAndToggleBtn();
+          }
+        },
+        (error) => {
+          coordsDisplay.style.backgroundColor = "#fef2f2";
+          coordsDisplay.style.borderColor = "#fecaca";
+          coordsDisplay.style.color = "#991b1b";
+          coordsDisplay.innerText = "يرجى تفعيل الـ GPS وإعطاء الصلاحية للموقع";
+          validateFormAndToggleBtn();
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+
+    function getEmpOfflineCount(empId) {
+      let offlineQueue = JSON.parse(localStorage.getItem('attendance_offline_queue') || '[]');
+      return offlineQueue.filter(rec => String(rec.empId).trim() === empId).length;
+    }
+
+    function checkEmpName() {
+      const empId = document.getElementById('empId').value.trim();
+      const empNameDisplay = document.getElementById('empNameDisplay');
+      const resultDiv = document.getElementById('resultMessage');
+
+      resultDiv.innerText = "";
+      isNameVerified = false;
+      validateFormAndToggleBtn();
+      clearTimeout(debounceTimer);
+
+      if (!empId) {
+        empNameDisplay.innerHTML = "أدخل الرقم للتحقق من الاسم...";
+        empNameDisplay.style.color = "#1e293b";
+        return;
+      }
+
+      empNameDisplay.innerText = "جاري التحقق من الرقم...";
+      empNameDisplay.style.color = "#64748b";
+
+      debounceTimer = setTimeout(() => {
+        const localOfflineCount = getEmpOfflineCount(empId);
+
+        if (navigator.onLine) {
+          fetch(SCRIPT_URL + "?action=checkName&empId=" + encodeURIComponent(empId))
+            .then(res => res.json())
+            .then(data => {
+              if (data.result === "found" && data.empName) {
+                const totalCount = (data.serverCount || 0) + localOfflineCount;
+                empNameDisplay.innerHTML = `<strong>الموظف: ${data.empName}</strong><div class="count-subtext">إجمالي تسجيلاتك المرفوعة: <strong>${totalCount}</strong> حركة</div>`;
+                empNameDisplay.style.color = "#16a34a";
+                isNameVerified = true;
+              } else {
+                empNameDisplay.innerText = "الرقم غير مسجل!";
+                empNameDisplay.style.color = "#dc2626";
+                isNameVerified = false;
+              }
+              validateFormAndToggleBtn();
+            })
+            .catch(() => {
+              fallbackToCache(empId, localOfflineCount);
+            });
+        } else {
+          fallbackToCache(empId, localOfflineCount);
+        }
+      }, 400);
+    }
+
+    function fallbackToCache(empId, localOfflineCount) {
+      const empNameDisplay = document.getElementById('empNameDisplay');
+      const cached = JSON.parse(localStorage.getItem('cached_employees') || '{}');
+
+      if (cached[empId]) {
+        empNameDisplay.innerHTML = `<strong>الموظف: ${cached[empId]}</strong><div class="count-subtext">تسجيلات أوفلاين معلقة: <strong>${localOfflineCount}</strong> حركة</div>`;
+        empNameDisplay.style.color = "#16a34a";
+        isNameVerified = true;
+      } else {
+        empNameDisplay.innerText = "نموذج التسجيل أوفلاين (مقبول)";
+        empNameDisplay.style.color = "#c2410c";
+        isNameVerified = true;
+      }
+      validateFormAndToggleBtn();
+    }
+
+    function validateFormAndToggleBtn() {
+      const submitBtn = document.getElementById('submitBtn');
+      if (isNameVerified && currentLat !== null && currentLng !== null) {
+        submitBtn.disabled = false;
+      } else {
+        submitBtn.disabled = true;
+      }
+    }
+
+    function sendAttendanceData() {
+      const empId = document.getElementById('empId').value.trim();
+      const resultDiv = document.getElementById('resultMessage');
+      const submitBtn = document.getElementById('submitBtn');
+
+      if (!isNameVerified || currentLat === null || currentLng === null) {
+        resultDiv.className = "error-msg";
+        resultDiv.innerText = "البيانات غير مكتملة!";
+        return;
+      }
+
+      submitBtn.disabled = true;
+
+      const record = {
+        empId: empId,
+        lat: currentLat,
+        lng: currentLng,
+        deviceId: getOrCreateDeviceId(),
+        timestamp: new Date().toLocaleString('sv-SE')
+      };
+
+      if (!navigator.onLine) {
+        saveRecordOffline(record);
+        resultDiv.className = "";
+        resultDiv.innerText = "تم حفظ الحركة أوفلاين بنجاح وسيتم رفعها عند توفر النت";
+        checkEmpName();
+        return;
+      }
+
+      resultDiv.className = "";
+      resultDiv.innerText = "جاري تسجيل الحركة...";
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(record)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result === "success") {
+          resultDiv.className = "";
+          resultDiv.innerText = "تم تسجيل حضورك بنجاح يا " + data.empName;
+          checkEmpName();
+          autoSyncOfflineData();
+        } else {
+          saveRecordOffline(record);
+          resultDiv.className = "error-msg";
+          resultDiv.innerText = "حدث خطأ بالرفع، تم التخزين أوفلاين مؤقتاً";
+          checkEmpName();
+        }
+      })
+      .catch(() => {
+        saveRecordOffline(record);
+        resultDiv.className = "error-msg";
+        resultDiv.innerText = "ضعف في التغطية، تم حفظ الحركة أوفلاين";
+        checkEmpName();
+      });
+    }
+
+    function saveRecordOffline(record) {
+      let offlineQueue = JSON.parse(localStorage.getItem('attendance_offline_queue') || '[]');
+      offlineQueue.push(record);
+      localStorage.setItem('attendance_offline_queue', JSON.stringify(offlineQueue));
+      updateOfflineCounter();
+    }
+
+    function updateOfflineCounter() {
+      let offlineQueue = JSON.parse(localStorage.getItem('attendance_offline_queue') || '[]');
+      const offlineStatusBox = document.getElementById('offlineStatusBox');
+      const offlineCountSpan = document.getElementById('offlineCount');
+
+      if (offlineQueue.length > 0) {
+        offlineCountSpan.innerText = offlineQueue.length;
+        offlineStatusBox.style.display = "block";
+      } else {
+        offlineStatusBox.style.display = "none";
+      }
+    }
+
+    function autoSyncOfflineData() {
+      let offlineQueue = JSON.parse(localStorage.getItem('attendance_offline_queue') || '[]');
+      if (offlineQueue.length === 0 || !navigator.onLine) return;
+
+      const recordToSync = offlineQueue[0];
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(recordToSync)
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.result === "success") {
+          offlineQueue.shift();
+          localStorage.setItem('attendance_offline_queue', JSON.stringify(offlineQueue));
+          updateOfflineCounter();
+          if (offlineQueue.length > 0) autoSyncOfflineData();
+        }
+      })
+      .catch(() => {});
+    }
+  </script>
+
+</body>
+</html>
