@@ -10,12 +10,10 @@
         .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 420px; }
         h2 { text-align: center; color: #1e3a8a; margin-top: 0; margin-bottom: 15px; }
         
-        /* شريط حالة الاتصال البارز والواضح جداً */
         .status-banner { width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 15px; transition: all 0.3s ease; }
         .banner-online { background-color: #d1fae5; color: #065f46; border: 2px solid #059669; }
         .banner-offline { background-color: #fee2e2; color: #991b1b; border: 2px solid #dc2626; }
         
-        /* عداد الحركات المنسقة */
         .stats-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
         .stat-box { flex: 1; padding: 10px; border-radius: 8px; text-align: center; background-color: #f8fafc; border: 1px solid #e2e8f0; }
         .stat-number { font-size: 20px; font-weight: bold; display: block; margin-top: 4px; }
@@ -24,11 +22,9 @@
 
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 6px; font-weight: bold; color: #333; }
-        .input-row { display: flex; gap: 8px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
-        input:focus, select:focus { border-color: #2563eb; outline: none; }
-        .btn-check { width: auto; white-space: nowrap; padding: 0 14px; background-color: #4b5563; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 0; }
-        .btn-check:hover { background-color: #374151; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+        input:focus { border-color: #2563eb; outline: none; }
+        
         .emp-name-box { padding: 10px; background-color: #e0f2fe; color: #0369a1; border-radius: 6px; font-weight: bold; text-align: center; margin-top: 8px; display: none; }
         
         button[type="submit"] { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
@@ -46,10 +42,8 @@
 <div class="card">
     <h2>تسجيل الحضور والدوام</h2>
 
-    <!-- شريط الاتصال البارز -->
     <div id="connectionBanner" class="status-banner banner-online">🟢 متصل بالإنترنت</div>
 
-    <!-- عداد الإرساليات والاستبيانات المعلقة -->
     <div class="stats-container">
         <div class="stat-box">
             <span style="font-size: 12px; color: #64748b; font-weight: bold;">المرسلة نجاحاً</span>
@@ -64,19 +58,8 @@
     <form id="attendanceForm">
         <div class="form-group">
             <label for="empId">الرقم الوظيفي:</label>
-            <div class="input-row">
-                <input type="number" id="empId" placeholder="أدخل الرقم الوظيفي" required autocomplete="off">
-                <button type="button" id="checkNameBtn" class="btn-check">فحص الاسم 🔍</button>
-            </div>
+            <input type="number" id="empId" placeholder="أدخل الرقم الوظيفي" required autocomplete="off">
             <div id="empNameDisplay" class="emp-name-box"></div>
-        </div>
-
-        <div class="form-group">
-            <label for="actionType">نوع الحركة:</label>
-            <select id="actionType" required>
-                <option value="حضور">حضور</option>
-                <option value="انصراف">انصراف</option>
-            </select>
         </div>
 
         <button type="submit" id="submitBtn">تأكيد وتسجيل الحضور</button>
@@ -86,11 +69,17 @@
 </div>
 
 <script>
-    // ⚠️ استبدل هذا الرابط برابط الـ Web App الخاص بك المنتهي بـ /exec
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxGsRleIgXGUaqjgaxBryLOhi4zls6nTHJpZubVPYgWB__rfi5qKL1gDLtYl4eTAXYo9g/exec";
+    // ⚠️ استبدل هذا الرابط برابط التطبيق الخص بك المنتهي بـ /exec
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_e8DNELnUzDMcy6csN3JXWu6e30A5_jZtlDygGnGTbEDxyYvG77DNVzxwsERNq6LAHA/exec";
+
+    // اعادة ضبط الذاكرة المحلية تلقائياً عند التحديث
+    if (!localStorage.getItem('app_reset_v6')) {
+        localStorage.removeItem('offline_attendance');
+        localStorage.setItem('successful_sent_count', '0');
+        localStorage.setItem('app_reset_v6', 'true');
+    }
 
     const empInput = document.getElementById('empId');
-    const checkNameBtn = document.getElementById('checkNameBtn');
     const empNameDisplay = document.getElementById('empNameDisplay');
     const submitBtn = document.getElementById('submitBtn');
     const statusBox = document.getElementById('statusBox');
@@ -98,10 +87,29 @@
     const sentCountDisplay = document.getElementById('sentCount');
     const pendingCountDisplay = document.getElementById('pendingCount');
 
-    let isNameVerified = false;
+    let debounceTimer;
+    let autoLat = null;
+    let autoLng = null;
     let verifiedEmpName = "";
 
-    // تحديث الشاشة وشريط الحالة والعدادات
+    // جلب موقع الجوال تلقائياً وبصمت في الخلفية
+    function autoFetchLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    autoLat = pos.coords.latitude;
+                    autoLng = pos.coords.longitude;
+                },
+                (err) => {
+                    autoLat = null;
+                    autoLng = null;
+                },
+                { timeout: 10000, enableHighAccuracy: true }
+            );
+        }
+    }
+    autoFetchLocation();
+
     function updateUI() {
         const pendingList = getOfflineRecords();
         const sentSuccessCount = localStorage.getItem('successful_sent_count') || "0";
@@ -120,38 +128,46 @@
 
     window.addEventListener('online', async () => {
         updateUI();
-        showStatus("⚡ تم استعادة الاتصال بالإنترنت! جاري رفع الحركات المعلقة تلقائياً...", "warning");
-        await syncOfflineData();
+        const pendingList = getOfflineRecords();
+        if (pendingList.length > 0) {
+            showStatus("⚡ تم استعادة الاتصال! جاري رفع الحركات المعلقة...", "warning");
+            await syncOfflineData();
+        }
     });
 
     window.addEventListener('offline', updateUI);
     updateUI();
 
-    // تفريغ فحص الاسم فور كتابة رقم جديد
+    // جلب الاسم تلقائياً مع ميزة دعم حفظ الأسماء للعمل بالأوفلاين
     empInput.addEventListener('input', () => {
-        isNameVerified = false;
-        verifiedEmpName = "";
-        empNameDisplay.style.display = 'none';
-    });
-
-    // 1. فحص اسم الموظف
-    checkNameBtn.addEventListener('click', () => {
+        clearTimeout(debounceTimer);
         const empId = empInput.value.trim();
+        verifiedEmpName = "";
+
         if (!empId) {
-            showStatus("يرجى إدخال الرقم الوظيفي أولاً لمطابقة الاسم", "warning");
+            empNameDisplay.style.display = 'none';
             return;
         }
-        fetchEmployeeName(empId);
+
+        const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
+        if (cachedNames[empId]) {
+            verifiedEmpName = cachedNames[empId];
+            empNameDisplay.style.display = 'block';
+            empNameDisplay.style.color = '#0369a1';
+            empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetchEmployeeNameAuto(empId);
+        }, 300);
     });
 
-    async function fetchEmployeeName(empId) {
-        checkNameBtn.disabled = true;
-        checkNameBtn.innerText = "جاري الفحص...";
-
+    async function fetchEmployeeNameAuto(empId) {
         if (!navigator.onLine) {
-            showStatus("⚠️ لا يمكن فحص الاسم في وضع الأوفلاين! يجب الاتصال بالإنترنت للتأكد من وجود الموظف.", "error");
-            checkNameBtn.disabled = false;
-            checkNameBtn.innerText = "فحص الاسم 🔍";
+            empNameDisplay.style.display = 'block';
+            empNameDisplay.style.color = '#854d0e';
+            empNameDisplay.innerText = 'أوفلاين (رقم جديد - سيتم تسجيله بالرقم وتطابقه لاحقاً)';
             return;
         }
 
@@ -160,90 +176,69 @@
             const data = await response.json();
             
             if (data.success && data.name) {
-                isNameVerified = true;
                 verifiedEmpName = data.name;
                 empNameDisplay.style.display = 'block';
                 empNameDisplay.style.color = '#0369a1';
                 empNameDisplay.innerText = `👤 الموظف: ${data.name}`;
-                showStatus("تم التثبت من اسم الموظف بنجاح!", "success");
+
+                const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
+                cachedNames[empId] = data.name;
+                localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
+
             } else {
-                isNameVerified = false;
                 verifiedEmpName = "";
                 empNameDisplay.style.display = 'block';
                 empNameDisplay.style.color = '#991b1b';
                 empNameDisplay.innerText = '❌ الرقم الوظيفي غير موجود بالجدول!';
-                showStatus("الرقم الوظيفي غير مسجل، يرجى التأكد من الرقم.", "error");
             }
         } catch (e) {
-            showStatus("تعذر الاتصال بالسيرفر لفحص الاسم.", "error");
-        } finally {
-            checkNameBtn.disabled = false;
-            checkNameBtn.innerText = "فحص الاسم 🔍";
+            empNameDisplay.style.display = 'block';
+            empNameDisplay.style.color = '#854d0e';
+            empNameDisplay.innerText = 'تعذر المطابقة المباشرة';
         }
     }
 
-    // 2. إرسال النموذج باشتراط (رقم + اسم + GPS)
+    // معالجة نموذج التسجيل
     document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const empId = empInput.value.trim();
-
         if (!empId) {
             showStatus("❌ يرجى إدخال الرقم الوظيفي!", "error");
             return;
         }
 
-        if (!isNameVerified || !verifiedEmpName) {
-            showStatus("❌ يرجى الضغط على زر (فحص الاسم 🔍) للتحقق من الموظف قبل الإرسال!", "error");
-            return;
-        }
-
         submitBtn.disabled = true;
-        showStatus("⏳ جاري التحقق من تفعيل الـ GPS وموقع الجهاز...", "warning");
+        showStatus("⏳ جاري تسجيل الحضور واستخراج الموقع تلقائياً...", "warning");
 
-        if (!navigator.geolocation) {
-            showStatus("❌ الموبايل لا يدعم تحديد الموقع الجغرافي (GPS)!", "error");
-            submitBtn.disabled = false;
-            return;
+        if (!autoLat || !autoLng) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        autoLat = pos.coords.latitude;
+                        autoLng = pos.coords.longitude;
+                        await executeSubmit(empId);
+                    },
+                    async (err) => {
+                        await executeSubmit(empId);
+                    },
+                    { timeout: 6000, enableHighAccuracy: true }
+                );
+            } else {
+                await executeSubmit(empId);
+            }
+        } else {
+            await executeSubmit(empId);
         }
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-
-                if (!lat || !lng) {
-                    showStatus("❌ فشل تحديد إحداثيات الموقع! يرجى تفعيل الـ GPS في الجهاز.", "error");
-                    submitBtn.disabled = false;
-                    return;
-                }
-
-                await processAttendance(empId, verifiedEmpName, document.getElementById('actionType').value, lat, lng);
-            },
-            (error) => {
-                let errorMsg = "❌ يتطلب التسجيل السماح بتحديد الموقع الجغرافي (GPS).";
-                if (error.code === error.PERMISSION_DENIED) {
-                    errorMsg = "❌ تم رفض إذن الـ GPS! يرجى السماح للموقع من إعدادات المتصفح.";
-                } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errorMsg = "❌ إشارة الـ GPS غير متوفرة، حاول التواجد في مكان مكشوف.";
-                } else if (error.code === error.TIMEOUT) {
-                    errorMsg = "❌ انتهت مهلة استخراج موقع الـ GPS. أعد المحاولة.";
-                }
-                
-                showStatus(errorMsg, "error");
-                submitBtn.disabled = false;
-            },
-            { timeout: 10000, enableHighAccuracy: true }
-        );
     });
 
-    async function processAttendance(empId, empName, actionType, lat, lng) {
+    async function executeSubmit(empId) {
         const record = {
             empId: empId,
-            empName: empName,
-            actionType: actionType,
-            latitude: lat,
-            longitude: lng,
+            empName: verifiedEmpName || "أوفلاين - محلي",
+            actionType: "حضور",
+            latitude: autoLat || "",
+            longitude: autoLng || "",
             timestamp: new Date().toISOString()
         };
 
@@ -251,7 +246,7 @@
             await sendToServer(record);
         } else {
             saveOfflineRecord(record);
-            showStatus("📦 تم حفظ الحركة بنجاح في المعلقة (أوفلاين)!", "success");
+            showStatus("📦 تم حفظ الحركة بنجاح في القائمة المعلقة (أوفلاين)!", "success");
             resetForm();
         }
     }
@@ -266,16 +261,15 @@
             });
 
             incrementSentCount(1);
-            showStatus("✅ تم إرسال الحضور أونلاين بنجاح واستيفاء كافة البيانات!", "success");
+            showStatus("✅ تم إرسال الحضور بنجاح!", "success");
             resetForm();
         } catch (err) {
             saveOfflineRecord(record);
-            showStatus("⚠️ تعذر الوصول للسيرفر حالياً. تم الحفظ أوفلاين بنجاح!", "warning");
+            showStatus("⚠️ تعذر الاتصال بالسيرفر، تم الحفظ أوفلاين بنجاح!", "warning");
             resetForm();
         }
     }
 
-    // إدارة الأوفلاين والمزامنة
     function saveOfflineRecord(record) {
         const list = getOfflineRecords();
         list.push(record);
@@ -294,7 +288,6 @@
         updateUI();
     }
 
-    // رفع حركات الأوفلاين وإعادة تحديث الصفحة تلقائياً
     async function syncOfflineData() {
         const list = getOfflineRecords();
         if (list.length === 0) return;
@@ -313,13 +306,12 @@
 
             showStatus(`🎉 تم رفع جميع الحركات المعلقة (${sentCount} حركة) بنجاح! جاري تحديث الصفحة...`, "success");
             
-            // إعادة تحديث الصفحة تلقائياً بعد ثانيتين
             setTimeout(() => {
                 window.location.reload();
             }, 2000);
 
         } catch (e) {
-            showStatus("⚠️ فشلت المزامنة التلقائية. ستتم المحاولة مجدداً عند استقرار الاتصال.", "error");
+            showStatus("⚠️ فشلت المزامنة التلقائية. ستتم المحاولة مجدداً لاحقاً.", "error");
         }
     }
 
@@ -333,8 +325,9 @@
         submitBtn.disabled = false;
         empInput.value = '';
         empNameDisplay.style.display = 'none';
-        isNameVerified = false;
-        verifiedEmpName = "";
+        autoLat = null;
+        autoLng = null;
+        autoFetchLocation();
         updateUI();
         setTimeout(() => {
             statusBox.style.display = 'none';
