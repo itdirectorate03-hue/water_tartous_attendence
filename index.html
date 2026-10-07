@@ -27,9 +27,12 @@
         
         .emp-name-box { padding: 10px; background-color: #e0f2fe; color: #0369a1; border-radius: 6px; font-weight: bold; text-align: center; margin-top: 8px; display: none; }
         
-        button[type="submit"] { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
-        button[type="submit"]:hover { background-color: #1d4ed8; }
-        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        /* صندوق الـ GPS للقراءة فقط */
+        .gps-readonly-box { padding: 10px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold; line-height: 1.5; }
+        
+        button[type="submit"] { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 15px; }
+        button[type="submit"]:hover:not(:disabled) { background-color: #1d4ed8; }
+        button:disabled { background-color: #9ca3af !important; cursor: not-allowed; opacity: 0.7; }
         
         .status-msg { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; display: none; line-height: 1.5; }
         .success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
@@ -62,25 +65,41 @@
             <div id="empNameDisplay" class="emp-name-box"></div>
         </div>
 
-        <button type="submit" id="submitBtn">تأكيد وتسجيل الحضور</button>
+        <div class="form-group">
+            <label>موقع الـ GPS المباشر (للقراءة فقط):</label>
+            <div id="gpsDisplay" class="gps-readonly-box">⏳ جاري جلب موقع الـ GPS تلقائياً...</div>
+        </div>
+
+        <button type="submit" id="submitBtn" disabled>تأكيد وتسجيل الحضور</button>
     </form>
 
     <div id="statusBox" class="status-msg"></div>
 </div>
 
 <script>
-    // ⚠️ استبدل هذا الرابط برابط التطبيق الخص بك المنتهي بـ /exec
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx_e8DNELnUzDMcy6csN3JXWu6e30A5_jZtlDygGnGTbEDxyYvG77DNVzxwsERNq6LAHA/exec";
+    // ⚠️ استبدل هذا الرابط برابط التطبيق الخاص بك المنتهي بـ /exec
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxj8olVMGDgbjCtYI7USSu4KAz6VGZHMMowKJojrkJannsQwFFyn4us87nU1Xeo08LPAQ/exec";
 
-    // اعادة ضبط الذاكرة المحلية تلقائياً عند التحديث
-    if (!localStorage.getItem('app_reset_v6')) {
+    // إعادة ضبط الذاكرة المحلية لمرة واحدة عند الترقية (Reset Flag v7)
+    if (!localStorage.getItem('app_reset_v7')) {
         localStorage.removeItem('offline_attendance');
         localStorage.setItem('successful_sent_count', '0');
-        localStorage.setItem('app_reset_v6', 'true');
+        localStorage.setItem('app_reset_v7', 'true');
+    }
+
+    // توليد أو قراءة رمز الجهاز الفريد (Device ID)
+    function getDeviceId() {
+        let id = localStorage.getItem('device_unique_id');
+        if (!id) {
+            id = 'DEV-' + Math.random().toString(36).substring(2, 9).toUpperCase() + '-' + Date.now().toString().slice(-4);
+            localStorage.setItem('device_unique_id', id);
+        }
+        return id;
     }
 
     const empInput = document.getElementById('empId');
     const empNameDisplay = document.getElementById('empNameDisplay');
+    const gpsDisplay = document.getElementById('gpsDisplay');
     const submitBtn = document.getElementById('submitBtn');
     const statusBox = document.getElementById('statusBox');
     const connectionBanner = document.getElementById('connectionBanner');
@@ -91,24 +110,56 @@
     let autoLat = null;
     let autoLng = null;
     let verifiedEmpName = "";
+    let empDept = "";
+    let empJobType = "";
+    let empWorkPlace = "";
 
-    // جلب موقع الجوال تلقائياً وبصمت في الخلفية
+    let isEmpValid = false;
+    let isGpsValid = false;
+
+    // 1. جلب الموقع تلقائياً فور فتح الرابط وتحديث واجهة الـ GPS
     function autoFetchLocation() {
+        gpsDisplay.innerText = "⏳ جاري تحديد موقع الـ GPS تلقائياً...";
+        gpsDisplay.style.color = "#334155";
+
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
                     autoLat = pos.coords.latitude;
                     autoLng = pos.coords.longitude;
+                    isGpsValid = true;
+                    gpsDisplay.innerHTML = `📍 **تم استخراج الموقع بنجاح**<br>عرض: ${autoLat.toFixed(5)} | طول: ${autoLng.toFixed(5)}`;
+                    gpsDisplay.style.color = "#047857";
+                    checkFormValidity();
                 },
                 (err) => {
                     autoLat = null;
                     autoLng = null;
+                    isGpsValid = false;
+                    gpsDisplay.innerText = "❌ تعذر استخراج موقع الـ GPS! يرجى تفعيل الموقع والجوال.";
+                    gpsDisplay.style.color = "#b91c1c";
+                    checkFormValidity();
                 },
                 { timeout: 10000, enableHighAccuracy: true }
             );
+        } else {
+            isGpsValid = false;
+            gpsDisplay.innerText = "❌ المتصفح لا يدعم الـ GPS!";
+            checkFormValidity();
         }
     }
+
+    // استدعاء جلب الموقع تلقائياً بمجرد فتح الواجهة
     autoFetchLocation();
+
+    // التحقق من تفعيل زر الإرسال عند اكتمال الشروط الثلاثة حصراً
+    function checkFormValidity() {
+        if (isEmpValid && isGpsValid && empInput.value.trim() !== "") {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
 
     function updateUI() {
         const pendingList = getOfflineRecords();
@@ -138,23 +189,33 @@
     window.addEventListener('offline', updateUI);
     updateUI();
 
-    // جلب الاسم تلقائياً مع ميزة دعم حفظ الأسماء للعمل بالأوفلاين
+    // 2. إدخال رقم الموظف والبحث عن الاسم والبيانات تلقائياً
     empInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         const empId = empInput.value.trim();
+        isEmpValid = false;
         verifiedEmpName = "";
+        checkFormValidity();
 
         if (!empId) {
             empNameDisplay.style.display = 'none';
             return;
         }
 
+        // قراءة الاسم والبيانات من الذاكرة المؤقتة (Cache) لدعم الأوفلاين والسلاسة
         const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
         if (cachedNames[empId]) {
-            verifiedEmpName = cachedNames[empId];
+            const info = cachedNames[empId];
+            verifiedEmpName = info.name;
+            empDept = info.dept || "";
+            empJobType = info.jobType || "";
+            empWorkPlace = info.workPlace || "";
+
+            isEmpValid = true;
             empNameDisplay.style.display = 'block';
             empNameDisplay.style.color = '#0369a1';
             empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
+            checkFormValidity();
             return;
         }
 
@@ -167,7 +228,9 @@
         if (!navigator.onLine) {
             empNameDisplay.style.display = 'block';
             empNameDisplay.style.color = '#854d0e';
-            empNameDisplay.innerText = 'أوفلاين (رقم جديد - سيتم تسجيله بالرقم وتطابقه لاحقاً)';
+            empNameDisplay.innerText = 'أوفلاين (رقم جديد - سيتم التسجيل بالرقم والمطابقة لاحقاً)';
+            isEmpValid = true; // السماح بالتسجيل أوفلاين
+            checkFormValidity();
             return;
         }
 
@@ -177,69 +240,67 @@
             
             if (data.success && data.name) {
                 verifiedEmpName = data.name;
+                empDept = data.dept || "";
+                empJobType = data.jobType || "";
+                empWorkPlace = data.workPlace || "";
+                
+                isEmpValid = true;
                 empNameDisplay.style.display = 'block';
                 empNameDisplay.style.color = '#0369a1';
                 empNameDisplay.innerText = `👤 الموظف: ${data.name}`;
 
+                // حفظ في ذاكرة الجوال
                 const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
-                cachedNames[empId] = data.name;
+                cachedNames[empId] = { name: data.name, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
                 localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
 
             } else {
+                isEmpValid = false;
                 verifiedEmpName = "";
                 empNameDisplay.style.display = 'block';
                 empNameDisplay.style.color = '#991b1b';
                 empNameDisplay.innerText = '❌ الرقم الوظيفي غير موجود بالجدول!';
             }
         } catch (e) {
+            isEmpValid = false;
             empNameDisplay.style.display = 'block';
             empNameDisplay.style.color = '#854d0e';
             empNameDisplay.innerText = 'تعذر المطابقة المباشرة';
         }
+        checkFormValidity();
     }
 
-    // معالجة نموذج التسجيل
+    // 3. إرسال النموذج المعتمد
     document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const empId = empInput.value.trim();
-        if (!empId) {
-            showStatus("❌ يرجى إدخال الرقم الوظيفي!", "error");
+        if (!isEmpValid || !isGpsValid) {
+            showStatus("❌ يجب استيفاء الرقم الوظيفي، والاسم، وموقع الـ GPS أولاً!", "error");
             return;
         }
 
         submitBtn.disabled = true;
-        showStatus("⏳ جاري تسجيل الحضور واستخراج الموقع تلقائياً...", "warning");
+        showStatus("⏳ جاري تسجيل وتوثيق الحركة...", "warning");
 
-        if (!autoLat || !autoLng) {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    async (pos) => {
-                        autoLat = pos.coords.latitude;
-                        autoLng = pos.coords.longitude;
-                        await executeSubmit(empId);
-                    },
-                    async (err) => {
-                        await executeSubmit(empId);
-                    },
-                    { timeout: 6000, enableHighAccuracy: true }
-                );
-            } else {
-                await executeSubmit(empId);
-            }
-        } else {
-            await executeSubmit(empId);
-        }
-    });
+        const empId = empInput.value.trim();
+        const now = new Date();
+        const formattedDeviceTime = now.getFullYear() + "-" + 
+            String(now.getMonth() + 1).padStart(2, '0') + "-" + 
+            String(now.getDate()).padStart(2, '0') + " " + 
+            String(now.getHours()).padStart(2, '0') + ":" + 
+            String(now.getMinutes()).padStart(2, '0') + ":" + 
+            String(now.getSeconds()).padStart(2, '0');
 
-    async function executeSubmit(empId) {
         const record = {
-            empId: empId,
-            empName: verifiedEmpName || "أوفلاين - محلي",
-            actionType: "حضور",
-            latitude: autoLat || "",
-            longitude: autoLng || "",
-            timestamp: new Date().toISOString()
+            deviceTimestamp: formattedDeviceTime, // 2. توقيت تسجيل الجهاز
+            empId: empId,                          // 3. الرقم الوظيفي
+            empName: verifiedEmpName || "أوفلاين - محلي", // 4. اسم الموظف
+            dept: empDept,                         // 5. القسم
+            jobType: empJobType,                   // 6. طبيعة العمل
+            workPlace: empWorkPlace,               // 7. مكان العمل
+            latitude: autoLat,                     // 8. خط العرض
+            longitude: autoLng,                    // 9. خط الطول
+            deviceId: getDeviceId()                // 12. رمز الجهاز ID
         };
 
         if (navigator.onLine) {
@@ -249,7 +310,7 @@
             showStatus("📦 تم حفظ الحركة بنجاح في القائمة المعلقة (أوفلاين)!", "success");
             resetForm();
         }
-    }
+    });
 
     async function sendToServer(record) {
         try {
@@ -261,7 +322,7 @@
             });
 
             incrementSentCount(1);
-            showStatus("✅ تم إرسال الحضور بنجاح!", "success");
+            showStatus("✅ تم إرسال الحضور بنجاح وبتوقيت الجهاز والـ GPS!", "success");
             resetForm();
         } catch (err) {
             saveOfflineRecord(record);
@@ -322,11 +383,14 @@
     }
 
     function resetForm() {
-        submitBtn.disabled = false;
         empInput.value = '';
         empNameDisplay.style.display = 'none';
-        autoLat = null;
-        autoLng = null;
+        isEmpValid = false;
+        verifiedEmpName = "";
+        empDept = "";
+        empJobType = "";
+        empWorkPlace = "";
+        checkFormValidity();
         autoFetchLocation();
         updateUI();
         setTimeout(() => {
