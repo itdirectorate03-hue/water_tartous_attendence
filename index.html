@@ -3,423 +3,596 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام تسجيل الحضور والدوام</title>
+    <meta name="theme-color" content="#0056b3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="الحضور">
+    <title>تسجيل الحضور - شركة مياه طرطوس</title>
     <style>
-        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; }
-        .card { background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 420px; }
-        h2 { text-align: center; color: #1e3a8a; margin-top: 0; margin-bottom: 15px; }
-        
-        .status-banner { width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 15px; transition: all 0.3s ease; }
-        .banner-online { background-color: #d1fae5; color: #065f46; border: 2px solid #059669; }
-        .banner-offline { background-color: #fee2e2; color: #991b1b; border: 2px solid #dc2626; }
-        
-        .stats-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
-        .stat-box { flex: 1; padding: 10px; border-radius: 8px; text-align: center; background-color: #f8fafc; border: 1px solid #e2e8f0; }
-        .stat-number { font-size: 20px; font-weight: bold; display: block; margin-top: 4px; }
-        .stat-sent { color: #2563eb; }
-        .stat-pending { color: #d97706; }
-
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 6px; font-weight: bold; color: #333; }
-        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
-        input:focus { border-color: #2563eb; outline: none; }
-        
-        .emp-name-box { padding: 10px; background-color: #e0f2fe; color: #0369a1; border-radius: 6px; font-weight: bold; text-align: center; margin-top: 8px; display: none; }
-        .gps-readonly-box { padding: 10px; background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; text-align: center; font-weight: bold; line-height: 1.5; }
-        
-        button[type="submit"] { width: 100%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 15px; }
-        button[type="submit"]:hover:not(:disabled) { background-color: #1d4ed8; }
-        button:disabled { background-color: #9ca3af !important; cursor: not-allowed !important; opacity: 0.6; }
-        
-        .status-msg { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; display: none; line-height: 1.5; }
-        .success { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .error { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-        .warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        :root { --primary-color: #0056b3; --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ff9800; --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #333; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 90vh; }
+        .container { max-width: 480px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; flex: 1; }
+        h2 { text-align: center; color: var(--primary-color); margin-bottom: 25px; font-size: 1.4rem; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        input:focus { border-color: var(--primary-color); outline: none; }
+        #empName { font-weight: bold; color: var(--primary-color); background: #eef4fc; border: 1px dashed var(--primary-color); }
+        #msg { margin-top: 5px; font-size: 0.85rem; min-height: 20px; }
+        .error-text { color: var(--danger-color); }
+        .success-text { color: var(--success-color); }
+        .gps-box { padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; text-align: center; font-weight: bold; line-height: 1.6; }
+        button[type="submit"] { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
+        .retry-gps { background: #6c757d; color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; margin-top: 5px; }
+        #offlineBadge { background: var(--warning-color); color: #fff; padding: 8px 10px; border-radius: 4px; font-size: 0.85rem; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; }
+        #statusBox { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; display: none; }
+        .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .status-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .status-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        footer { text-align: center; margin-top: 30px; font-size: 0.8rem; color: #666; border-top: 1px solid #ddd; padding-top: 15px; }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h2>تسجيل حضور العاملين</h2>
+        <div id="offlineBadge">📴 وضع عدم الاتصال — سيتم الحفظ والإرسال لاحقاً</div>
 
-<div class="card">
-    <h2>تسجيل الحضور والدوام</h2>
+        <form id="attendanceForm">
+            <div class="form-group">
+                <label for="empId">الرقم الوظيفي:</label>
+                <input type="number" id="empId" placeholder="أدخل رقمك الوظيفي" required autocomplete="off">
+                <div id="msg"></div>
+            </div>
 
-    <div id="connectionBanner" class="status-banner banner-online">🟢 متصل بالإنترنت</div>
+            <div class="form-group">
+                <label for="empName">اسم الموظف:</label>
+                <input type="text" id="empName" readonly placeholder="سيظهر الاسم تلقائياً">
+            </div>
 
-    <div class="stats-container">
-        <div class="stat-box">
-            <span style="font-size: 12px; color: #64748b; font-weight: bold;">المرسلة نجاحاً</span>
-            <span id="sentCount" class="stat-number stat-sent">0</span>
-        </div>
-        <div class="stat-box">
-            <span style="font-size: 12px; color: #64748b; font-weight: bold;">المعلقة (أوفلاين)</span>
-            <span id="pendingCount" class="stat-number stat-pending">0</span>
-        </div>
+            <div class="form-group">
+                <label>موقع الـ GPS:</label>
+                <div id="gpsDisplay" class="gps-box">⏳ جاري تحديد موقعك تلقائياً...</div>
+            </div>
+
+            <button type="submit" id="submitBtn" disabled>إثبات الحضور</button>
+        </form>
+
+        <div id="statusBox"></div>
     </div>
 
-    <form id="attendanceForm">
-        <div class="form-group">
-            <label for="empId">الرقم الوظيفي:</label>
-            <input type="number" id="empId" placeholder="أدخل الرقم الوظيفي" required autocomplete="off">
-            <div id="empNameDisplay" class="emp-name-box"></div>
-        </div>
+    <footer>تم تنفيذ هذا الرابط من قبل مديرية المعلوماتية والتقانة - شركة مياه طرطوس</footer>
 
-        <div class="form-group">
-            <label>موقع الـ GPS المباشر (للقراءة فقط):</label>
-            <div id="gpsDisplay" class="gps-readonly-box">⏳ جاري جلب موقع الـ GPS تلقائياً...</div>
-        </div>
+    <script>
+    // ============================================================
+    // 1) توليد الـ Manifest كـ Data URI (يحتوي أيقونة SVG للقطرة)
+    // ============================================================
+    (function generateManifest() {
+        // أيقونة SVG على شكل قطرة مياه (مشفرة URL-encoded)
+        var svgIcon = "data:image/svg+xml;utf8," +
+            encodeURIComponent(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
+                '<rect width="512" height="512" rx="80" fill="#0056b3"/>' +
+                '<path d="M256 80 C 256 80, 120 240, 120 320 C 120 395, 180 440, 256 440 C 332 440, 392 395, 392 320 C 392 240, 256 80, 256 80 Z" fill="#ffffff"/>' +
+                '<ellipse cx="200" cy="320" rx="30" ry="50" fill="#e0f2fe" opacity="0.7"/>' +
+                '</svg>'
+            );
 
-        <button type="submit" id="submitBtn" disabled>تأكيد وتسجيل الحضور</button>
-    </form>
+        var manifest = {
+            name: "تسجيل حضور - شركة مياه طرطوس",
+            short_name: "الحضور",
+            description: "نظام تسجيل حضور العاملين",
+            start_url: ".",
+            scope: ".",
+            display: "standalone",
+            background_color: "#f4f7f6",
+            theme_color: "#0056b3",
+            orientation: "portrait",
+            lang: "ar",
+            dir: "rtl",
+            icons: [
+                { src: svgIcon, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+                { src: svgIcon, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+            ]
+        };
 
-    <div id="statusBox" class="status-msg"></div>
-</div>
+        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = url;
+        document.head.appendChild(link);
 
-<script>
-    // ⚠️ ضع رابط الـ Web App الخاص بك المنتهي بـ /exec هنا
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbziJcn4cEHogawYRUCUXdTiagHcpnBljjzvlHl2JOpOdoyY_wDf-ak5F_Pa5G6xJL-d2Q/exec";
+        // أيقونة Apple للـ iPhone
+        var appleIcon = document.createElement('link');
+        appleIcon.rel = 'apple-touch-icon';
+        appleIcon.href = svgIcon;
+        document.head.appendChild(appleIcon);
 
-    if (!localStorage.getItem('app_reset_v13')) {
-        localStorage.removeItem('offline_attendance');
-        localStorage.removeItem('cached_emp_names');
-        localStorage.setItem('successful_sent_count', '0');
-        localStorage.setItem('app_reset_v13', 'true');
+        // Favicon
+        var favicon = document.createElement('link');
+        favicon.rel = 'icon';
+        favicon.href = svgIcon;
+        document.head.appendChild(favicon);
+    })();
+
+    // ============================================================
+    // 2) تسجيل الـ Service Worker من Blob (يعمل بدون ملف خارجي)
+    // ============================================================
+    (function registerServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+
+        var swCode = [
+            "var CACHE_NAME = 'attendance-pwa-v1';",
+            "var URLS = ['./'];",
+            "self.addEventListener('install', function(e){",
+            "  e.waitUntil(caches.open(CACHE_NAME).then(function(c){return c.addAll(URLS);}).then(function(){return self.skipWaiting();}));",
+            "});",
+            "self.addEventListener('activate', function(e){",
+            "  e.waitUntil(caches.keys().then(function(keys){",
+            "    return Promise.all(keys.map(function(k){ if(k!==CACHE_NAME) return caches.delete(k); }));",
+            "  }).then(function(){return self.clients.claim();}));",
+            "});",
+            "self.addEventListener('fetch', function(e){",
+            "  var req = e.request;",
+            "  if (req.method !== 'GET') return;",
+            "  if (req.url.indexOf('script.google.com') !== -1 || req.url.indexOf('googleusercontent.com') !== -1) return;",
+            "  e.respondWith(caches.match(req).then(function(cached){",
+            "    if (cached) return cached;",
+            "    return fetch(req).then(function(res){",
+            "      if (res && res.status === 200 && res.type === 'basic') {",
+            "        var clone = res.clone();",
+            "        caches.open(CACHE_NAME).then(function(c){ c.put(req, clone); });",
+            "      }",
+            "      return res;",
+            "    }).catch(function(){ return caches.match('./'); });",
+            "  }));",
+            "});"
+        ].join("\n");
+
+        var swBlob = new Blob([swCode], { type: 'application/javascript' });
+        var swUrl = URL.createObjectURL(swBlob);
+
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register(swUrl).then(function (reg) {
+                console.log('ServiceWorker registered:', reg.scope);
+            }).catch(function (err) {
+                console.log('ServiceWorker registration failed:', err);
+            });
+        });
+    })();
+
+    // ============================================================
+    // 3) Polyfill: fetch للمتصفحات القديمة
+    // ============================================================
+    if (typeof window.fetch !== 'function') {
+        window.fetch = function (url, options) {
+            options = options || {};
+            return new Promise(function (resolve, reject) {
+                var xhr = new XMLHttpRequest();
+                try { xhr.open(options.method || 'GET', url, true); }
+                catch (e) { reject(new Error('XHR open failed')); return; }
+                if (options.headers) {
+                    for (var k in options.headers) {
+                        if (Object.prototype.hasOwnProperty.call(options.headers, k)) {
+                            try { xhr.setRequestHeader(k, options.headers[k]); } catch (e) {}
+                        }
+                    }
+                }
+                xhr.onload = function () {
+                    var text = xhr.responseText || '';
+                    resolve({
+                        ok: xhr.status >= 200 && xhr.status < 300,
+                        status: xhr.status,
+                        text: function () { return Promise.resolve(text); },
+                        json: function () {
+                            return new Promise(function (res, rej) {
+                                try { res(JSON.parse(text)); } catch (err) { rej(err); }
+                            });
+                        }
+                    });
+                };
+                xhr.onerror = function () { reject(new Error('Network error')); };
+                xhr.ontimeout = function () { reject(new Error('Timeout')); };
+                xhr.onabort = function () { reject(new Error('Aborted')); };
+                try { xhr.send(options.body || null); }
+                catch (e) { reject(new Error('XHR send failed')); }
+            });
+        };
     }
 
+    // ============================================================
+    // 4) fetch مع مهلة
+    // ============================================================
+    function fetchWithTimeout(url, options, timeoutMs) {
+        return new Promise(function (resolve, reject) {
+            var done = false;
+            var timer = setTimeout(function () {
+                if (!done) { done = true; reject(new Error('Timeout')); }
+            }, timeoutMs);
+            fetch(url, options).then(function (res) {
+                if (!done) { done = true; clearTimeout(timer); resolve(res); }
+            }).catch(function (err) {
+                if (!done) { done = true; clearTimeout(timer); reject(err); }
+            });
+        });
+    }
+
+    // ============================================================
+    // 5) الإعدادات والحالة
+    // ============================================================
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZiGmt7lLQCBUECBMBpldTJMRHfYXdi1go1Bv_SkKmEL4u-Gw8ZqBOOhPio2zoRJc2yQ/exec";
+    var QUEUE_KEY = 'offline_attendance_queue';
+    var CHUNK_SIZE = 25;
+    var SEND_TIMEOUT_MS = 30000;
+
+    var isEmpValid = false;
+    var isGpsValid = false;
+    var isSending = false;
+    var gpsLat = null, gpsLng = null, gpsAccuracy = null;
+    var empData = { name: '', dept: '', jobType: '', workPlace: '' };
+    var debounceTimer = null;
+
+    var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, offlineBadge, statusBox;
+
     function getDeviceId() {
-        let id = localStorage.getItem('device_unique_id');
+        var id = localStorage.getItem('device_unique_id');
         if (!id) {
-            id = 'DEV-' + Math.random().toString(36).substring(2, 9).toUpperCase() + '-' + Date.now().toString().slice(-4);
+            id = 'DEV-' + Math.random().toString(36).substring(2, 9).toUpperCase();
             localStorage.setItem('device_unique_id', id);
         }
         return id;
     }
 
-    const empInput = document.getElementById('empId');
-    const empNameDisplay = document.getElementById('empNameDisplay');
-    const gpsDisplay = document.getElementById('gpsDisplay');
-    const submitBtn = document.getElementById('submitBtn');
-    const statusBox = document.getElementById('statusBox');
-    const connectionBanner = document.getElementById('connectionBanner');
-    const sentCountDisplay = document.getElementById('sentCount');
-    const pendingCountDisplay = document.getElementById('pendingCount');
-
-    let debounceTimer;
-    let autoLat = null;
-    let autoLng = null;
-    let verifiedEmpName = "";
-    let empDept = "";
-    let empJobType = "";
-    let empWorkPlace = "";
-
-    let isEmpValid = false;
-    let isGpsValid = false;
-
-    async function preloadAllEmployees() {
-        if (!navigator.onLine) return;
-        try {
-            const res = await fetch(`${SCRIPT_URL}?action=getAllEmployees`);
-            const data = await res.json();
-            if (data.success && data.employees) {
-                localStorage.setItem('cached_emp_names', JSON.stringify(data.employees));
-            }
-        } catch (e) {}
-    }
-    preloadAllEmployees();
-
-    function autoFetchLocation() {
-        gpsDisplay.innerText = "⏳ جاري تحديد موقع الـ GPS تلقائياً...";
+    // ============================================================
+    // 6) GPS
+    // ============================================================
+    function startGpsFetch() {
+        gpsDisplay.innerHTML = "⏳ جاري تحديد موقعك تلقائياً...";
         gpsDisplay.style.color = "#334155";
+        isGpsValid = false;
+        checkFormValidity();
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    autoLat = pos.coords.latitude;
-                    autoLng = pos.coords.longitude;
-                    isGpsValid = true;
-                    gpsDisplay.innerHTML = `📍 **تم استخراج الموقع بنجاح**<br>عرض: ${autoLat.toFixed(5)} | طول: ${autoLng.toFixed(5)}`;
-                    gpsDisplay.style.color = "#047857";
-                    checkFormValidity();
-                },
-                (err) => {
-                    autoLat = null;
-                    autoLng = null;
-                    isGpsValid = false;
-                    gpsDisplay.innerText = "❌ تعذر استخراج موقع الـ GPS! يرجى تفعيل الموقع بالجهاز.";
-                    gpsDisplay.style.color = "#b91c1c";
-                    checkFormValidity();
-                },
-                { timeout: 10000, enableHighAccuracy: true }
-            );
-        } else {
-            isGpsValid = false;
-            gpsDisplay.innerText = "❌ المتصفح لا يدعم تحديد الموقع!";
-            checkFormValidity();
+        if (!navigator.geolocation) {
+            gpsDisplay.innerHTML = "❌ متصفحك لا يدعم تحديد الموقع";
+            return;
         }
-    }
 
-    autoFetchLocation();
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                gpsLat = pos.coords.latitude;
+                gpsLng = pos.coords.longitude;
+                gpsAccuracy = Math.round(pos.coords.accuracy);
+                isGpsValid = true;
+                gpsDisplay.innerHTML = '✅ <strong>تم استخراج الموقع بنجاح</strong><br>' +
+                    'خط العرض: ' + gpsLat.toFixed(5) + ' | خط الطول: ' + gpsLng.toFixed(5) + '<br>' +
+                    'الدقة: ~' + gpsAccuracy + ' متر';
+                gpsDisplay.style.color = "#047857";
+                checkFormValidity();
+            },
+            function (err) {
+                gpsLat = null; gpsLng = null; gpsAccuracy = null;
+                isGpsValid = false;
+                var reason = "تعذر الحصول على الموقع";
+                if (err.code === 1) reason = "تم رفض صلاحية الموقع — فعّلها من إعدادات المتصفح";
+                else if (err.code === 2) reason = "الموقع غير متاح حالياً — تأكد من تشغيل GPS";
+                else if (err.code === 3) reason = "انتهت مهلة تحديد الموقع";
+                gpsDisplay.innerHTML = '❌ ' + reason + '<br>' +
+                    '<button type="button" class="retry-gps" onclick="startGpsFetch()">🔄 إعادة المحاولة</button>';
+                gpsDisplay.style.color = "#b91c1c";
+                checkFormValidity();
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    }
 
     function checkFormValidity() {
-        if (isEmpValid === true && isGpsValid === true && empInput.value.trim() !== "") {
+        if (isEmpValid && isGpsValid && !isSending && empIdInput.value.trim() !== "") {
             submitBtn.disabled = false;
         } else {
             submitBtn.disabled = true;
         }
     }
 
-    function updateUI() {
-        const pendingList = getOfflineRecords();
-        const sentSuccessCount = localStorage.getItem('successful_sent_count') || "0";
-
-        pendingCountDisplay.innerText = pendingList.length;
-        sentCountDisplay.innerText = sentSuccessCount;
-
-        if (navigator.onLine) {
-            connectionBanner.className = "status-banner banner-online";
-            connectionBanner.innerText = "🟢 متصل بالإنترنت";
-        } else {
-            connectionBanner.className = "status-banner banner-offline";
-            connectionBanner.innerText = "🔴 غير متصل بالإنترنت (أوفلاين)";
-        }
-    }
-
-    window.addEventListener('online', async () => {
-        updateUI();
-        preloadAllEmployees();
-        const pendingList = getOfflineRecords();
-        if (pendingList.length > 0) {
-            showStatus("⚡ تم استعادة الاتصال! جاري رفع الحركات المعلقة...", "warning");
-            await syncOfflineData();
-        }
-    });
-
-    window.addEventListener('offline', updateUI);
-    updateUI();
-
-    // البحث مع تثبيت النتيجة فور مطابقتها محلياً
-    empInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        const empId = empInput.value.trim();
-        
-        isEmpValid = false;
-        verifiedEmpName = "";
-        checkFormValidity();
-
-        if (!empId) {
-            empNameDisplay.style.display = 'none';
-            return;
-        }
-
-        // 1. الفحص من الذاكرة المحلية أولاً
-        const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
-        if (cachedNames[empId] && cachedNames[empId].name) {
-            const info = cachedNames[empId];
-            verifiedEmpName = info.name;
-            empDept = info.dept || "";
-            empJobType = info.jobType || "";
-            empWorkPlace = info.workPlace || "";
-
-            isEmpValid = true;
-            empNameDisplay.style.display = 'block';
-            empNameDisplay.style.color = '#0369a1';
-            empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
-            checkFormValidity();
-            return; // إنهاء الدالة فوراً لمنع أي استدعاء خلفي قد يلغي النتيجة
-        }
-
-        // 2. إذا لم يجد الاسم بالذاكرة وكان أوفلاين
-        if (!navigator.onLine) {
-            isEmpValid = false;
-            empNameDisplay.style.display = 'block';
-            empNameDisplay.style.color = '#991b1b';
-            empNameDisplay.innerText = '❌ الرقم غير محفوظ بالذاكرة (يتطلب نت لمرة واحدة)';
-            checkFormValidity();
-            return;
-        }
-
-        // 3. البحث من السيرفر فقط إذا لم يُعثر عليه في الكاش المحفوط
-        empNameDisplay.style.display = 'block';
-        empNameDisplay.style.color = '#334155';
-        empNameDisplay.innerText = '⏳ جاري التحقق من الرقم الوظيفي...';
-
-        debounceTimer = setTimeout(() => {
-            fetchEmployeeNameAuto(empId);
-        }, 400);
-    });
-
-    async function fetchEmployeeNameAuto(empId) {
-        // حماية إضافية: لو أصبحت الحالة مؤكدة محلياً أثناء الانتظار، يتوقف
-        if (isEmpValid && empInput.value.trim() === empId) return;
-
-        try {
-            const response = await fetch(`${SCRIPT_URL}?action=getEmpName&empId=${encodeURIComponent(empId)}`);
-            const data = await response.json();
-            
-            // التأكد أن الرقم المدخل حالياً هو نفسه الذي تم طلب الفحص له لم تفارق الخانة
-            if (empInput.value.trim() !== empId) return;
-
-            const nameFound = data.empName || data.name;
-
-            if (data.success && nameFound && nameFound !== "undefined") {
-                verifiedEmpName = nameFound;
-                empDept = data.dept || "";
-                empJobType = data.jobType || "";
-                empWorkPlace = data.workPlace || "";
-                
-                isEmpValid = true;
-                empNameDisplay.style.display = 'block';
-                empNameDisplay.style.color = '#0369a1';
-                empNameDisplay.innerText = `👤 الموظف: ${verifiedEmpName}`;
-
-                const cachedNames = JSON.parse(localStorage.getItem('cached_emp_names') || "{}");
-                cachedNames[empId] = { name: verifiedEmpName, dept: empDept, jobType: empJobType, workPlace: empWorkPlace };
-                localStorage.setItem('cached_emp_names', JSON.stringify(cachedNames));
-
-            } else {
-                isEmpValid = false;
-                verifiedEmpName = "";
-                empNameDisplay.style.display = 'block';
-                empNameDisplay.style.color = '#991b1b';
-                empNameDisplay.innerText = '❌ الرقم الوظيفي غير موجود بقاعدة البيانات!';
-            }
-        } catch (e) {
-            if (empInput.value.trim() === empId && !isEmpValid) {
-                isEmpValid = false;
-                empNameDisplay.style.display = 'block';
-                empNameDisplay.style.color = '#991b1b';
-                empNameDisplay.innerText = '❌ تعذر التحقق من السيرفر حالياً';
-            }
-        }
-        checkFormValidity();
-    }
-
-    document.getElementById('attendanceForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        if (!isEmpValid || !isGpsValid) {
-            showStatus("❌ ينبغي مطابقة اسم الموظف وجلب الـ GPS أولاً قبل الإرسال!", "error");
-            return;
-        }
-
-        submitBtn.disabled = true;
-        showStatus("⏳ جاري تسجيل وتوثيق الحركة...", "warning");
-
-        const empId = empInput.value.trim();
-        const now = new Date();
-        const formattedDeviceTime = now.getFullYear() + "-" + 
-            String(now.getMonth() + 1).padStart(2, '0') + "-" + 
-            String(now.getDate()).padStart(2, '0') + " " + 
-            String(now.getHours()).padStart(2, '0') + ":" + 
-            String(now.getMinutes()).padStart(2, '0') + ":" + 
-            String(now.getSeconds()).padStart(2, '0');
-
-        const record = {
-            deviceTimestamp: formattedDeviceTime,
-            empId: empId,
-            empName: verifiedEmpName || "أوفلاين - محلي",
-            dept: empDept,
-            jobType: empJobType,
-            workPlace: empWorkPlace,
-            latitude: autoLat,
-            longitude: autoLng,
-            deviceId: getDeviceId()
-        };
-
-        if (navigator.onLine) {
-            await sendToServer(record);
-        } else {
-            saveOfflineRecord(record);
-            showStatus("📦 تم حفظ الحركة بنجاح في القائمة المعلقة (أوفلاين)!", "success");
-            resetForm();
-        }
-    });
-
-    async function sendToServer(record) {
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(record)
-            });
-
-            incrementSentCount(1);
-            showStatus("✅ تم إرسال الحضور بنجاح وبتوقيت الجهاز والـ GPS!", "success");
-            resetForm();
-        } catch (err) {
-            saveOfflineRecord(record);
-            showStatus("⚠️ تعذر الاتصال بالسيرفر، تم الحفظ أوفلاين بنجاح!", "warning");
-            resetForm();
-        }
-    }
-
-    function saveOfflineRecord(record) {
-        const list = getOfflineRecords();
-        list.push(record);
-        localStorage.setItem('offline_attendance', JSON.stringify(list));
-        updateUI();
-    }
-
-    function getOfflineRecords() {
-        return JSON.parse(localStorage.getItem('offline_attendance') || "[]");
-    }
-
-    function incrementSentCount(count) {
-        let current = parseInt(localStorage.getItem('successful_sent_count') || "0");
-        current += count;
-        localStorage.setItem('successful_sent_count', current.toString());
-        updateUI();
-    }
-
-    async function syncOfflineData() {
-        const list = getOfflineRecords();
-        if (list.length === 0) return;
-
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(list)
-            });
-
-            const sentCount = list.length;
-            localStorage.removeItem('offline_attendance');
-            incrementSentCount(sentCount);
-
-            showStatus(`🎉 تم رفع جميع الحركات المعلقة (${sentCount} حركة) بنجاح! جاري تحديث الصفحة...`, "success");
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
-
-        } catch (e) {
-            showStatus("⚠️ فشلت المزامنة التلقائية. ستتم المحاولة مجدداً لاحقاً.", "error");
-        }
-    }
-
     function showStatus(msg, type) {
-        statusBox.innerText = msg;
-        statusBox.className = `status-msg ${type}`;
+        statusBox.textContent = msg;
+        statusBox.className = 'status-' + type;
         statusBox.style.display = 'block';
     }
 
-    function resetForm() {
-        empInput.value = '';
-        empNameDisplay.style.display = 'none';
-        isEmpValid = false;
-        verifiedEmpName = "";
-        empDept = "";
-        empJobType = "";
-        empWorkPlace = "";
-        checkFormValidity();
-        autoFetchLocation();
-        updateUI();
-        setTimeout(() => {
-            statusBox.style.display = 'none';
-        }, 4000);
+    function hideStatus(delay) {
+        setTimeout(function () { statusBox.style.display = 'none'; }, delay || 5000);
     }
-</script>
 
+    function updateLocalEmployeesCache() {
+        if (!navigator.onLine) return;
+        fetchWithTimeout(SCRIPT_URL + "?action=getAllEmployees", {}, 15000)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                if (data.success && data.employees) {
+                    localStorage.setItem('cached_emp_names', JSON.stringify(data.employees));
+                }
+            })
+            .catch(function () {});
+    }
+
+    // ============================================================
+    // 7) مراقبة إدخال الرقم الوظيفي
+    // ============================================================
+    function handleEmpIdInput() {
+        var val = empIdInput.value.trim();
+        clearTimeout(debounceTimer);
+        isEmpValid = false;
+        empNameInput.value = '';
+        msgDiv.textContent = '';
+        checkFormValidity();
+        if (!val) return;
+
+        var cacheHit = false;
+        var cachedStr = localStorage.getItem('cached_emp_names');
+        if (cachedStr) {
+            try {
+                var map = JSON.parse(cachedStr);
+                if (map[val] && map[val].name) {
+                    empData = map[val];
+                    empNameInput.value = empData.name;
+                    msgDiv.textContent = navigator.onLine
+                        ? "✓ موظف معتمد (جاري التحديث...)"
+                        : "✓ موظف معتمد (من الذاكرة)";
+                    msgDiv.className = "success-text";
+                    isEmpValid = true;
+                    checkFormValidity();
+                    cacheHit = true;
+                }
+            } catch (e) {}
+        }
+
+        if (!navigator.onLine) {
+            if (!cacheHit) {
+                msgDiv.textContent = "❌ غير موجود محلياً، يلزم إنترنت للتحقق";
+                msgDiv.className = "error-text";
+            }
+            return;
+        }
+
+        if (!cacheHit) {
+            msgDiv.textContent = "⏳ جاري التحقق...";
+            msgDiv.className = "";
+        }
+
+        debounceTimer = setTimeout(function () {
+            if (empIdInput.value.trim() !== val) return;
+
+            fetchWithTimeout(SCRIPT_URL + "?action=getEmpName&empId=" + encodeURIComponent(val), {}, 10000)
+                .then(function (res) { return res.json(); })
+                .then(function (result) {
+                    if (empIdInput.value.trim() !== val) return;
+
+                    if (result.success && result.empName) {
+                        empData = {
+                            name: result.empName,
+                            dept: result.dept || '',
+                            jobType: result.jobType || '',
+                            workPlace: result.workPlace || ''
+                        };
+                        empNameInput.value = empData.name;
+                        msgDiv.textContent = "✓ موظف معتمد";
+                        msgDiv.className = "success-text";
+                        isEmpValid = true;
+
+                        try {
+                            var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
+                            map[val] = empData;
+                            localStorage.setItem('cached_emp_names', JSON.stringify(map));
+                        } catch (e) {}
+
+                        checkFormValidity();
+                    } else {
+                        msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
+                        msgDiv.className = "error-text";
+                        isEmpValid = false;
+                        checkFormValidity();
+                    }
+                })
+                .catch(function () {
+                    if (empIdInput.value.trim() !== val) return;
+                    if (cacheHit) {
+                        msgDiv.textContent = "✓ موظف معتمد (من الذاكرة)";
+                        msgDiv.className = "success-text";
+                        isEmpValid = true;
+                    } else {
+                        msgDiv.textContent = "❌ تعذر الاتصال بالسيرفر";
+                        msgDiv.className = "error-text";
+                        isEmpValid = false;
+                    }
+                    checkFormValidity();
+                });
+        }, 300);
+    }
+
+    // ============================================================
+    // 8) الإرسال
+    // ============================================================
+    function sendSingleWithTimeout(payload) {
+        return fetchWithTimeout(SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        }, SEND_TIMEOUT_MS).then(function (res) {
+            if (!res.ok) return 'offline';
+            return res.json().then(function (data) {
+                return (data && data.success) ? 'success' : 'rejected';
+            });
+        }).catch(function () {
+            return 'offline';
+        });
+    }
+
+    function handleAttendanceSubmit(e) {
+        e.preventDefault();
+        if (!isEmpValid || !isGpsValid || isSending) return;
+
+        isSending = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "⏳ جاري إرسال البصمة...";
+        statusBox.style.display = 'none';
+
+        var payload = {
+            empId: empIdInput.value.trim(),
+            empName: empData.name || empNameInput.value.trim(),
+            dept: empData.dept || '',
+            jobType: empData.jobType || '',
+            workPlace: empData.workPlace || '',
+            latitude: gpsLat,
+            longitude: gpsLng,
+            accuracy: gpsAccuracy,
+            deviceTimestamp: new Date().toISOString(),
+            deviceId: getDeviceId()
+        };
+
+        var afterResult = function (result) {
+            if (result === 'success') {
+                showStatus("✅ تم تسجيل الحضور بنجاح في السيرفر", "success");
+                hideStatus(5000);
+            } else if (result === 'rejected') {
+                showStatus("❌ رفض السيرفر الطلب — تحقق من رقمك الوظيفي", "error");
+                hideStatus(6000);
+            } else {
+                saveToQueue(payload);
+                showStatus(
+                    navigator.onLine
+                        ? "⏱️ انتهت 30 ثانية دون رد — تم حفظ البصمة محلياً وسيتم إرسالها تلقائياً"
+                        : "📴 لا يوجد إنترنت — تم حفظ البصمة محلياً وسيتم إرسالها تلقائياً",
+                    "warning"
+                );
+                hideStatus(6000);
+                if (navigator.onLine) processBatchesInChunks();
+            }
+
+            empIdInput.value = '';
+            empNameInput.value = '';
+            msgDiv.textContent = '';
+            isEmpValid = false;
+            isSending = false;
+            submitBtn.textContent = "إثبات الحضور";
+            checkFormValidity();
+            setTimeout(startGpsFetch, 800);
+        };
+
+        if (navigator.onLine) {
+            sendSingleWithTimeout(payload).then(afterResult);
+        } else {
+            afterResult('offline');
+        }
+    }
+
+    function saveToQueue(payload) {
+        var q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+        q.push(payload);
+        localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+    }
+
+    function getQueue() {
+        return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+    }
+
+    function processBatchesInChunks() {
+        if (!navigator.onLine) return Promise.resolve(false);
+        if (processBatchesInChunks._running) return Promise.resolve(false);
+        processBatchesInChunks._running = true;
+
+        function processNext() {
+            var queue = getQueue();
+            if (queue.length === 0) {
+                processBatchesInChunks._running = false;
+                return Promise.resolve(true);
+            }
+
+            var chunk = queue.slice(0, CHUNK_SIZE);
+
+            return fetchWithTimeout(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(chunk)
+            }, SEND_TIMEOUT_MS).then(function (res) {
+                if (!res.ok) throw new Error('not ok');
+                return res.json();
+            }).then(function (data) {
+                var q = getQueue();
+
+                if (data && data.success) {
+                    q.splice(0, chunk.length);
+                    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+                } else if (data && typeof data.processed === 'number' && data.processed > 0) {
+                    q.splice(0, data.processed);
+                    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+                    processBatchesInChunks._running = false;
+                    return false;
+                } else {
+                    processBatchesInChunks._running = false;
+                    return false;
+                }
+
+                return new Promise(function (resolve) {
+                    setTimeout(resolve, 800);
+                }).then(processNext);
+            }).catch(function () {
+                processBatchesInChunks._running = false;
+                return false;
+            });
+        }
+
+        return processNext();
+    }
+
+    // ============================================================
+    // 9) التشغيل
+    // ============================================================
+    function init() {
+        empIdInput = document.getElementById('empId');
+        empNameInput = document.getElementById('empName');
+        msgDiv = document.getElementById('msg');
+        gpsDisplay = document.getElementById('gpsDisplay');
+        submitBtn = document.getElementById('submitBtn');
+        offlineBadge = document.getElementById('offlineBadge');
+        statusBox = document.getElementById('statusBox');
+
+        empIdInput.addEventListener('input', handleEmpIdInput);
+        document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+
+        window.addEventListener('online', function () {
+            offlineBadge.style.display = 'none';
+            updateLocalEmployeesCache();
+            processBatchesInChunks();
+        });
+        window.addEventListener('offline', function () {
+            offlineBadge.style.display = 'block';
+        });
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && navigator.onLine) {
+                processBatchesInChunks();
+            }
+        });
+        window.addEventListener('beforeunload', function (e) {
+            if (getQueue().length > 0) {
+                e.preventDefault();
+                e.returnValue = 'لديك بصمات لم تُرسل بعد. هل تريد إغلاق الصفحة؟';
+                return e.returnValue;
+            }
+        });
+
+        startGpsFetch();
+        updateLocalEmployeesCache();
+        if (!navigator.onLine) offlineBadge.style.display = 'block';
+        if (navigator.onLine) {
+            setTimeout(function () { processBatchesInChunks(); }, 1500);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+    </script>
 </body>
 </html>
