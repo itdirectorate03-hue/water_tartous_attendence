@@ -7,6 +7,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="الحضور">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
     <title>شركة مياه طرطوس - رابط الدوام</title>
     <style>
         :root { --primary-color: #0056b3; --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ff9800; --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #333; }
@@ -89,102 +92,32 @@
 
     <script>
     // ============================================================
-    // 1) توليد الـ Manifest
+    // 1) تنظيف أي Service Worker قديم (Blob) ثم تسجيل الجديد
     // ============================================================
-    (function generateManifest() {
-        var svgIcon = "data:image/svg+xml;utf8," +
-            encodeURIComponent(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
-                '<rect width="512" height="512" rx="80" fill="#0056b3"/>' +
-                '<path d="M256 80 C 256 80, 120 240, 120 320 C 120 395, 180 440, 256 440 C 332 440, 392 395, 392 320 C 392 240, 256 80, 256 80 Z" fill="#ffffff"/>' +
-                '<ellipse cx="200" cy="320" rx="30" ry="50" fill="#e0f2fe" opacity="0.7"/>' +
-                '</svg>'
-            );
-
-        var manifest = {
-            name: "تسجيل حضور - شركة مياه طرطوس",
-            short_name: "الحضور",
-            description: "نظام تسجيل حضور العاملين",
-            start_url: ".",
-            scope: ".",
-            display: "standalone",
-            background_color: "#f4f7f6",
-            theme_color: "#0056b3",
-            orientation: "portrait",
-            lang: "ar",
-            dir: "rtl",
-            icons: [
-                { src: svgIcon, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
-                { src: svgIcon, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
-            ]
-        };
-
-        var blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-        var url = URL.createObjectURL(blob);
-        var link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = url;
-        document.head.appendChild(link);
-
-        var appleIcon = document.createElement('link');
-        appleIcon.rel = 'apple-touch-icon';
-        appleIcon.href = svgIcon;
-        document.head.appendChild(appleIcon);
-
-        var favicon = document.createElement('link');
-        favicon.rel = 'icon';
-        favicon.href = svgIcon;
-        document.head.appendChild(favicon);
-    })();
-
-    // ============================================================
-    // 2) Service Worker
-    // ============================================================
-    (function registerServiceWorker() {
-        if (!('serviceWorker' in navigator)) return;
-
-        var swCode = [
-            "var CACHE_NAME = 'attendance-pwa-v1';",
-            "var URLS = ['./'];",
-            "self.addEventListener('install', function(e){",
-            "  e.waitUntil(caches.open(CACHE_NAME).then(function(c){return c.addAll(URLS);}).then(function(){return self.skipWaiting();}));",
-            "});",
-            "self.addEventListener('activate', function(e){",
-            "  e.waitUntil(caches.keys().then(function(keys){",
-            "    return Promise.all(keys.map(function(k){ if(k!==CACHE_NAME) return caches.delete(k); }));",
-            "  }).then(function(){return self.clients.claim();}));",
-            "});",
-            "self.addEventListener('fetch', function(e){",
-            "  var req = e.request;",
-            "  if (req.method !== 'GET') return;",
-            "  if (req.url.indexOf('script.google.com') !== -1 || req.url.indexOf('googleusercontent.com') !== -1) return;",
-            "  e.respondWith(caches.match(req).then(function(cached){",
-            "    if (cached) return cached;",
-            "    return fetch(req).then(function(res){",
-            "      if (res && res.status === 200 && res.type === 'basic') {",
-            "        var clone = res.clone();",
-            "        caches.open(CACHE_NAME).then(function(c){ c.put(req, clone); });",
-            "      }",
-            "      return res;",
-            "    }).catch(function(){ return caches.match('./'); });",
-            "  }));",
-            "});"
-        ].join("\n");
-
-        var swBlob = new Blob([swCode], { type: 'application/javascript' });
-        var swUrl = URL.createObjectURL(swBlob);
-
-        window.addEventListener('load', function () {
-            navigator.serviceWorker.register(swUrl).then(function (reg) {
-                console.log('ServiceWorker registered:', reg.scope);
-            }).catch(function (err) {
-                console.log('ServiceWorker registration failed:', err);
+    if ('serviceWorker' in navigator) {
+        // احذف أي تسجيل قديم أولاً
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+            var cleaned = false;
+            regs.forEach(function (reg) {
+                // احذف فقط الـ Blob SW القديم (URL يبدأ بـ blob:)
+                if (reg.active && reg.active.scriptURL && reg.active.scriptURL.indexOf('blob:') === 0) {
+                    reg.unregister();
+                    console.log('Old Blob SW unregistered');
+                    cleaned = true;
+                }
             });
         });
-    })();
+
+        // سجّل الـ Service Worker الجديد
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('./service-worker.js')
+                .then(function (reg) { console.log('SW registered:', reg.scope); })
+                .catch(function (err) { console.log('SW failed:', err); });
+        });
+    }
 
     // ============================================================
-    // 3) Polyfill: fetch
+    // 2) Polyfill: fetch (للمتصفحات القديمة)
     // ============================================================
     if (typeof window.fetch !== 'function') {
         window.fetch = function (url, options) {
@@ -237,9 +170,9 @@
     }
 
     // ============================================================
-    // 4) الإعدادات
+    // 3) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9tydOh-fUh3CqmwBLRpLqyZF0IK3iSpVUJ_6cBJ1oS-egBbYj7NzNdy3rFYXcLPRlRA/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwmTk09A-MmqUPdePjNz2th7sCmRR-24CXF-5rG4Qj2w4faXYftLOE2W0wKYs4BYXyXvQ/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -251,18 +184,18 @@
     var gpsLat = null, gpsLng = null, gpsAccuracy = null;
     var empData = { name: '', dept: '', jobType: '', workPlace: '' };
     var debounceTimer = null;
+    var syncRetryTimer = null;
 
     var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, statusBox;
     var connectionBanner, sentCountDisplay, pendingCountDisplay;
 
     // ============================================================
-    // ✅ دالة: تنسيق التاريخ بتوقيت سوريا GMT+3
+    // 4) توقيت سوريا GMT+3
     // ============================================================
     function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
     function getSyriaTimeString() {
         var now = new Date();
-        // UTC + 3 ساعات
         var utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
         var syria = new Date(utcMs + (3 * 3600000));
         return syria.getFullYear() + '-' +
@@ -283,7 +216,7 @@
     }
 
     // ============================================================
-    // 5) تحديث الإحصائيات + شريط الحالة
+    // 5) تحديث الواجهة (Banner + إحصائيات)
     // ============================================================
     function updateUI() {
         var pendingList = getQueue();
@@ -477,7 +410,7 @@
     }
 
     // ============================================================
-    // 8) الإرسال
+    // 8) الإرسال الفردي
     // ============================================================
     function sendSingleWithTimeout(payload) {
         return fetchWithTimeout(SCRIPT_URL, {
@@ -502,7 +435,6 @@
         submitBtn.textContent = "⏳ جاري الإرسال...";
         statusBox.style.display = 'none';
 
-        // تحديد مصدر الإرسال حسب حالة الاتصال
         var origin = navigator.onLine ? "متصل" : "غير متصل";
 
         var payload = {
@@ -514,7 +446,7 @@
             latitude: gpsLat,
             longitude: gpsLng,
             accuracy: gpsAccuracy,
-            deviceTimestamp: getSyriaTimeString(),   // ✅ توقيت سوريا GMT+3
+            deviceTimestamp: getSyriaTimeString(),
             deviceId: getDeviceId(),
             origin: origin
         };
@@ -569,7 +501,7 @@
     }
 
     // ============================================================
-    // 9) مزامنة الأوفلاين
+    // 9) مزامنة الأوفلاين (دفعات + حذف انتقائي)
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
@@ -642,7 +574,19 @@
     }
 
     // ============================================================
-    // 10) التشغيل
+    // 10) إعادة محاولة المزامنة كل 30 ثانية (فقط إذا في queue)
+    // ============================================================
+    function scheduleSyncRetry() {
+        if (syncRetryTimer) return;
+        syncRetryTimer = setInterval(function () {
+            if (getQueue().length === 0) return;
+            if (!navigator.onLine) return;
+            processBatchesInChunks();
+        }, 30000);
+    }
+
+    // ============================================================
+    // 11) التشغيل
     // ============================================================
     function init() {
         empIdInput = document.getElementById('empId');
@@ -666,6 +610,9 @@
         window.addEventListener('offline', function () {
             updateUI();
         });
+        window.addEventListener('focus', function () {
+            if (navigator.onLine) processBatchesInChunks();
+        });
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible' && navigator.onLine) {
                 processBatchesInChunks();
@@ -683,13 +630,22 @@
         updateLocalEmployeesCache();
         updateUI();
 
+        // محاولة إرسال البصمات المعلقة فوراً عند فتح الصفحة
+        var pendingOnLoad = getQueue().length;
+        if (pendingOnLoad > 0) {
+            showStatus("⏳ لديك " + pendingOnLoad + " بصمة معلقة، جاري محاولة الإرسال...", "warning");
+        }
         if (navigator.onLine) {
+            processBatchesInChunks();
             fetchWithTimeout(SCRIPT_URL + "?action=ping", {}, 5000).catch(function () {});
         }
+        setTimeout(function () {
+            if (navigator.onLine && getQueue().length > 0) {
+                processBatchesInChunks();
+            }
+        }, 2000);
 
-        if (navigator.onLine) {
-            setTimeout(function () { processBatchesInChunks(); }, 1500);
-        }
+        scheduleSyncRetry();
     }
 
     if (document.readyState === 'loading') {
