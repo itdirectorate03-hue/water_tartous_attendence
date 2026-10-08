@@ -239,7 +239,7 @@
     // ============================================================
     // 4) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOcgQi3JoyxdS5KMBJ6swIUp43pFZcTRrlz19ZADEc-bYqh1ZcKdWtcNN1buHOe3i-QQ/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcBUvIB4qWBt3Hr5phEgye6VqL3AJ4h3yGs7HNGamxnpHtwRmjBw4wGgymliPfJFb_xA/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -485,7 +485,7 @@
         statusBox.style.display = 'none';
 
         // تحديد مصدر الإرسال حسب حالة الاتصال
-        var origin = navigator.onLine ? "اونلاين" : "اوفلاين";
+        var origin = navigator.onLine ? "متصل" : "غير متصل";
 
         var payload = {
             empId: empIdInput.value.trim(),
