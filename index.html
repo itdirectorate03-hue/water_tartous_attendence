@@ -393,7 +393,7 @@
         } catch (e) { console.error('handleEmpIdInput:', e); }
     }
 
-    // ✅ بحث مع Retry تلقائي (4 محاولات بدون تدخل المستخدم)
+    // ✅ بحث مع Retry تلقائي
     function fetchEmployeeName(empId, cacheHit, attempt) {
         if (lastSearchController) {
             try { lastSearchController.abort(); } catch (e) {}
@@ -486,19 +486,24 @@
     }
 
     // ============================================================
-    // 9) الإرسال الفردي
+    // 9) الإرسال الفردي (no-cors بدون انتظار رد)
     // ============================================================
     function sendSingleWithTimeout(payload) {
-        return fetchWithTimeout(SCRIPT_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        }, SEND_TIMEOUT_MS).then(function (res) {
-            if (!res.ok) return 'offline';
-            return res.json().then(function (data) {
-                return (data && data.success) ? 'success' : 'rejected';
-            });
-        }).catch(function () {
-            return 'offline';
+        return new Promise(function (resolve) {
+            try {
+                fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify(payload)
+                }).then(function () {
+                    // الطلب أُرسل → نعتبره نجاح (Idempotency يمنع التكرار)
+                    setTimeout(function () { resolve('success'); }, 1200);
+                }).catch(function () {
+                    resolve('offline');
+                });
+            } catch (e) {
+                resolve('offline');
+            }
         });
     }
 
@@ -533,9 +538,6 @@
                 incrementSentCount(1);
                 showStatus("✅ تم تسجيل الحضور بنجاح", "success");
                 hideStatus(5000);
-            } else if (result === 'rejected') {
-                showStatus("❌ رفض السيرفر الطلب — تحقق من رقمك الوظيفي", "error");
-                hideStatus(6000);
             } else {
                 saveToQueue(payload);
                 showStatus(
@@ -585,7 +587,7 @@
     }
 
     // ============================================================
-    // 11) المزامنة الجماعية
+    // 11) المزامنة الجماعية (no-cors بدون انتظار رد)
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
@@ -594,7 +596,6 @@
             var now = Date.now();
             if (processBatchesInChunks._startTime && (now - processBatchesInChunks._startTime) > 60000) {
                 processBatchesInChunks._running = false;
-                console.log('Force reset _running');
             } else {
                 return Promise.resolve(false);
             }
@@ -620,24 +621,30 @@
 
             var chunk = queue.slice(0, CHUNK_SIZE);
 
-            return fetchWithTimeout(SCRIPT_URL, {
-                method: 'POST',
-                body: JSON.stringify(chunk)
-            }, SEND_TIMEOUT_MS).then(function (res) {
-                if (!res.ok) throw new Error('not ok');
-                return res.json();
-            }).then(function (data) {
-                var q = getQueue();
-                if (data && data.success) {
-                    q.splice(0, chunk.length);
-                    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-                    incrementSentCount(chunk.length);
-                    totalSent += chunk.length;
-                } else if (data && typeof data.processed === 'number' && data.processed > 0) {
-                    q.splice(0, data.processed);
-                    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
-                    incrementSentCount(data.processed);
-                    totalSent += data.processed;
+            return new Promise(function (resolve) {
+                try {
+                    fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        body: JSON.stringify(chunk)
+                    }).then(function () {
+                        // الطلب أُرسل → احذف من queue بعد 1.2 ثانية
+                        setTimeout(function () {
+                            var q = getQueue();
+                            q.splice(0, chunk.length);
+                            localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+                            incrementSentCount(chunk.length);
+                            totalSent += chunk.length;
+                            resolve(true);
+                        }, 1200);
+                    }).catch(function () {
+                        resolve(false);
+                    });
+                } catch (e) {
+                    resolve(false);
+                }
+            }).then(function (ok) {
+                if (!ok) {
                     processBatchesInChunks._running = false;
                     processBatchesInChunks._startTime = null;
                     updateUI();
@@ -646,22 +653,8 @@
                         hideStatus(6000);
                     }
                     return false;
-                } else {
-                    processBatchesInChunks._running = false;
-                    processBatchesInChunks._startTime = null;
-                    updateUI();
-                    return false;
                 }
                 return new Promise(function (r) { setTimeout(r, 800); }).then(processNext);
-            }).catch(function () {
-                processBatchesInChunks._running = false;
-                processBatchesInChunks._startTime = null;
-                updateUI();
-                if (totalSent > 0) {
-                    showStatus("✅ تم إرسال " + totalSent + " عملية أوفلاين بنجاح", "success");
-                    hideStatus(6000);
-                }
-                return false;
             });
         }
 
