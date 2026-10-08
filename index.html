@@ -99,7 +99,6 @@
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (regs) {
             regs.forEach(function (reg) {
-                // احذف فقط SW القديم من Blob
                 if (reg.active && reg.active.scriptURL && reg.active.scriptURL.indexOf('blob:') === 0) {
                     reg.unregister();
                 }
@@ -110,7 +109,6 @@
             navigator.serviceWorker.register('./service-worker.js', { scope: './' })
                 .then(function (reg) {
                     console.log('SW registered:', reg.scope);
-                    // Force update check
                     reg.update();
                 })
                 .catch(function (err) { console.log('SW failed:', err); });
@@ -156,12 +154,29 @@
         };
     }
 
+    // ============================================================
+    // 3) fetch مع Timeout (مع AbortController)
+    // ============================================================
     function fetchWithTimeout(url, options, timeoutMs) {
         return new Promise(function (resolve, reject) {
+            var controller = null;
+            var timer = null;
             var done = false;
-            var timer = setTimeout(function () {
-                if (!done) { done = true; reject(new Error('Timeout')); }
+
+            if (typeof AbortController !== 'undefined') {
+                controller = new AbortController();
+                options = options || {};
+                options.signal = controller.signal;
+            }
+
+            timer = setTimeout(function () {
+                if (!done) {
+                    done = true;
+                    if (controller) { try { controller.abort(); } catch (e) {} }
+                    reject(new Error('Timeout'));
+                }
             }, timeoutMs);
+
             fetch(url, options).then(function (res) {
                 if (!done) { done = true; clearTimeout(timer); resolve(res); }
             }).catch(function (err) {
@@ -171,9 +186,9 @@
     }
 
     // ============================================================
-    // 3) الإعدادات
+    // 4) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwmTk09A-MmqUPdePjNz2th7sCmRR-24CXF-5rG4Qj2w4faXYftLOE2W0wKYs4BYXyXvQ/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQkiOx_U0y7hE8mAgnr4uBGz7vkeqGikDTELukZbmKsiR1no0H50jUttSrhWmWaUWskw/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -191,7 +206,7 @@
     var connectionBanner, sentCountDisplay, pendingCountDisplay;
 
     // ============================================================
-    // 4) توقيت سوريا GMT+3
+    // 5) توقيت سوريا GMT+3
     // ============================================================
     function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
@@ -212,8 +227,12 @@
         return id;
     }
 
+    function generateUid() {
+        return 'REC-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
+    }
+
     // ============================================================
-    // 5) UI
+    // 6) تحديث الواجهة
     // ============================================================
     function updateUI() {
         try {
@@ -241,7 +260,7 @@
     }
 
     // ============================================================
-    // 6) GPS
+    // 7) GPS
     // ============================================================
     function startGpsFetch() {
         try {
@@ -316,7 +335,7 @@
     }
 
     // ============================================================
-    // 7) مراقبة الرقم الوظيفي
+    // 8) مراقبة الرقم الوظيفي
     // ============================================================
     function handleEmpIdInput() {
         try {
@@ -409,7 +428,7 @@
     }
 
     // ============================================================
-    // 8) الإرسال
+    // 9) الإرسال الفردي
     // ============================================================
     function sendSingleWithTimeout(payload) {
         return fetchWithTimeout(SCRIPT_URL, {
@@ -437,6 +456,7 @@
         var origin = navigator.onLine ? "متصل" : "غير متصل";
 
         var payload = {
+            _uid: generateUid(),
             empId: empIdInput.value.trim(),
             empName: empData.name || empNameInput.value.trim(),
             dept: empData.dept || '',
@@ -488,7 +508,14 @@
         }
     }
 
+    // ============================================================
+    // 10) قائمة الأوفلاين
+    // ============================================================
     function saveToQueue(payload) {
+        // ✅ ضمان وجود _uid
+        if (!payload._uid) {
+            payload._uid = generateUid();
+        }
         var q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
         q.push(payload);
         localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
@@ -501,12 +528,24 @@
     }
 
     // ============================================================
-    // 9) المزامنة الجماعية
+    // 11) المزامنة الجماعية (مع حماية _running)
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
-        if (processBatchesInChunks._running) return Promise.resolve(false);
+        
+        // ✅ حماية: لو _running عالق لأكثر من 60 ثانية → أعد تعيينه
+        if (processBatchesInChunks._running) {
+            var now = Date.now();
+            if (processBatchesInChunks._startTime && (now - processBatchesInChunks._startTime) > 60000) {
+                processBatchesInChunks._running = false;
+                console.log('Force reset _running');
+            } else {
+                return Promise.resolve(false);
+            }
+        }
+        
         processBatchesInChunks._running = true;
+        processBatchesInChunks._startTime = Date.now();
 
         var totalSent = 0;
 
@@ -514,6 +553,7 @@
             var queue = getQueue();
             if (queue.length === 0) {
                 processBatchesInChunks._running = false;
+                processBatchesInChunks._startTime = null;
                 updateUI();
                 if (totalSent > 0) {
                     showStatus("✅ تم إرسال " + totalSent + " عملية أوفلاين بنجاح", "success");
@@ -543,6 +583,7 @@
                     incrementSentCount(data.processed);
                     totalSent += data.processed;
                     processBatchesInChunks._running = false;
+                    processBatchesInChunks._startTime = null;
                     updateUI();
                     if (totalSent > 0) {
                         showStatus("✅ تم إرسال " + totalSent + " عملية أوفلاين بنجاح", "success");
@@ -551,12 +592,14 @@
                     return false;
                 } else {
                     processBatchesInChunks._running = false;
+                    processBatchesInChunks._startTime = null;
                     updateUI();
                     return false;
                 }
                 return new Promise(function (r) { setTimeout(r, 800); }).then(processNext);
             }).catch(function () {
                 processBatchesInChunks._running = false;
+                processBatchesInChunks._startTime = null;
                 updateUI();
                 if (totalSent > 0) {
                     showStatus("✅ تم إرسال " + totalSent + " عملية أوفلاين بنجاح", "success");
@@ -579,7 +622,7 @@
     }
 
     // ============================================================
-    // 10) التشغيل
+    // 12) التشغيل
     // ============================================================
     function init() {
         try {
@@ -593,7 +636,6 @@
             sentCountDisplay = document.getElementById('sentCount');
             pendingCountDisplay = document.getElementById('pendingCount');
 
-            // ✅ حماية: تأكد أن حقل الرقم دائماً مفتوح
             empIdInput.disabled = false;
             empIdInput.readOnly = false;
             empIdInput.style.pointerEvents = 'auto';
@@ -645,7 +687,6 @@
             scheduleSyncRetry();
         } catch (err) {
             console.error('Init error:', err);
-            // حماية أخيرة: افتح الحقل حتى لو فيه خطأ
             try {
                 var input = document.getElementById('empId');
                 if (input) {
