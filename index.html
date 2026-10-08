@@ -84,7 +84,7 @@
                 <div id="gpsDisplay" class="gps-box">⏳ جاري تحديد موقعك تلقائياً...</div>
             </div>
 
-            <button type="submit" id="submitBtn" disabled>إثبات الحضور</button>
+            <button type="submit" id="submitBtn" disabled>إرسال</button>
         </form>
 
         <div id="statusBox"></div>
@@ -155,7 +155,7 @@
     }
 
     // ============================================================
-    // 3) fetch مع Timeout (مع AbortController)
+    // 3) fetch مع Timeout
     // ============================================================
     function fetchWithTimeout(url, options, timeoutMs) {
         return new Promise(function (resolve, reject) {
@@ -188,7 +188,7 @@
     // ============================================================
     // 4) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzQkiOx_U0y7hE8mAgnr4uBGz7vkeqGikDTELukZbmKsiR1no0H50jUttSrhWmWaUWskw/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNm4UUxWyglBoNNakUhuiHTzdo0R7mm44-yhzVuUEfopbFdiOhyQldzCGODhyeUqc1ig/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -201,6 +201,7 @@
     var empData = { name: '', dept: '', jobType: '', workPlace: '' };
     var debounceTimer = null;
     var syncRetryTimer = null;
+    var lastSearchController = null;
 
     var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, statusBox;
     var connectionBanner, sentCountDisplay, pendingCountDisplay;
@@ -341,6 +342,12 @@
         try {
             var val = empIdInput.value.trim();
             clearTimeout(debounceTimer);
+
+            if (lastSearchController) {
+                try { lastSearchController.abort(); } catch (e) {}
+                lastSearchController = null;
+            }
+
             isEmpValid = false;
             empNameInput.value = '';
             msgDiv.textContent = '';
@@ -381,50 +388,101 @@
 
             debounceTimer = setTimeout(function () {
                 if (empIdInput.value.trim() !== val) return;
-
-                fetchWithTimeout(SCRIPT_URL + "?action=getEmpName&empId=" + encodeURIComponent(val), {}, 10000)
-                    .then(function (res) { return res.json(); })
-                    .then(function (result) {
-                        if (empIdInput.value.trim() !== val) return;
-                        if (result.success && result.empName) {
-                            empData = {
-                                name: result.empName,
-                                dept: result.dept || '',
-                                jobType: result.jobType || '',
-                                workPlace: result.workPlace || ''
-                            };
-                            empNameInput.value = empData.name;
-                            msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
-                            msgDiv.className = "success-text";
-                            isEmpValid = true;
-                            try {
-                                var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
-                                map[val] = empData;
-                                localStorage.setItem('cached_emp_names', JSON.stringify(map));
-                            } catch (e) {}
-                            checkFormValidity();
-                        } else {
-                            msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
-                            msgDiv.className = "error-text";
-                            isEmpValid = false;
-                            checkFormValidity();
-                        }
-                    })
-                    .catch(function () {
-                        if (empIdInput.value.trim() !== val) return;
-                        if (cacheHit) {
-                            msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
-                            msgDiv.className = "success-text";
-                            isEmpValid = true;
-                        } else {
-                            msgDiv.textContent = "❌ تعذر الاتصال بالسيرفر";
-                            msgDiv.className = "error-text";
-                            isEmpValid = false;
-                        }
-                        checkFormValidity();
-                    });
+                fetchEmployeeName(val, cacheHit, 1);
             }, 300);
         } catch (e) { console.error('handleEmpIdInput:', e); }
+    }
+
+    // ✅ بحث مع Retry تلقائي (4 محاولات بدون تدخل المستخدم)
+    function fetchEmployeeName(empId, cacheHit, attempt) {
+        if (lastSearchController) {
+            try { lastSearchController.abort(); } catch (e) {}
+        }
+        lastSearchController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+
+        if (attempt === 1 && !cacheHit) {
+            msgDiv.textContent = "⏳ جاري التحقق...";
+            msgDiv.className = "";
+        }
+
+        var controller = lastSearchController;
+        var timer = setTimeout(function () {
+            if (controller) { try { controller.abort(); } catch (e) {} }
+        }, 20000);
+
+        var fetchOptions = {};
+        if (controller) fetchOptions.signal = controller.signal;
+
+        fetch(SCRIPT_URL + "?action=getEmpName&empId=" + encodeURIComponent(empId), fetchOptions)
+            .then(function (res) {
+                clearTimeout(timer);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (result) {
+                if (empIdInput.value.trim() !== empId) return;
+
+                if (result.success && result.empName) {
+                    empData = {
+                        name: result.empName,
+                        dept: result.dept || '',
+                        jobType: result.jobType || '',
+                        workPlace: result.workPlace || ''
+                    };
+                    empNameInput.value = empData.name;
+                    msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
+                    msgDiv.className = "success-text";
+                    isEmpValid = true;
+
+                    try {
+                        var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
+                        map[empId] = empData;
+                        localStorage.setItem('cached_emp_names', JSON.stringify(map));
+                    } catch (e) {}
+
+                    checkFormValidity();
+                } else {
+                    msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
+                    msgDiv.className = "error-text";
+                    isEmpValid = false;
+                    checkFormValidity();
+                }
+            })
+            .catch(function (err) {
+                clearTimeout(timer);
+                if (empIdInput.value.trim() !== empId) return;
+
+                if (err && err.name === 'AbortError' && empIdInput.value.trim() !== empId) {
+                    return;
+                }
+
+                if (attempt < 4) {
+                    var waitTimes = { 1: 1500, 2: 2500, 3: 3500 };
+                    var wait = waitTimes[attempt] || 3500;
+
+                    if (!cacheHit) {
+                        msgDiv.textContent = "⏳ السيرفر يستغرق وقتاً... جاري المحاولة (" + (attempt + 1) + "/4)";
+                        msgDiv.className = "";
+                    }
+
+                    setTimeout(function () {
+                        if (empIdInput.value.trim() !== empId) return;
+                        fetchEmployeeName(empId, cacheHit, attempt + 1);
+                    }, wait);
+                    return;
+                }
+
+                if (cacheHit) {
+                    msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
+                    msgDiv.className = "success-text";
+                    isEmpValid = true;
+                } else {
+                    msgDiv.textContent = "❌ تعذر الاتصال بالسيرفر — سيتم إعادة المحاولة عند الكتابة من جديد";
+                    msgDiv.className = "error-text";
+                    isEmpValid = false;
+                }
+                checkFormValidity();
+            });
     }
 
     // ============================================================
@@ -482,8 +540,8 @@
                 saveToQueue(payload);
                 showStatus(
                     navigator.onLine
-                        ? "⏱️ انتهت 30 ثانية دون رد — تم حفظ البصمة محلياً وسيتم إرسالها تلقائياً"
-                        : "📴 لا يوجد إنترنت — تم حفظ البصمة محلياً وسيتم إرسالها تلقائياً",
+                        ? "⏱️ انتهت 30 ثانية دون رد — تم حفظ البصمة وسيتم إرسالها تلقائياً عند توفر الشبكة"
+                        : "📴 لا يوجد إنترنت — تم حفظ البصمة وسيتم إرسالها تلقائياً عند توفر الشبكة",
                     "warning"
                 );
                 hideStatus(6000);
@@ -495,7 +553,7 @@
             msgDiv.textContent = '';
             isEmpValid = false;
             isSending = false;
-            submitBtn.textContent = "إثبات الحضور";
+            submitBtn.textContent = "إرسال";
             checkFormValidity();
             updateUI();
             setTimeout(startGpsFetch, 800);
@@ -512,7 +570,6 @@
     // 10) قائمة الأوفلاين
     // ============================================================
     function saveToQueue(payload) {
-        // ✅ ضمان وجود _uid
         if (!payload._uid) {
             payload._uid = generateUid();
         }
@@ -528,12 +585,11 @@
     }
 
     // ============================================================
-    // 11) المزامنة الجماعية (مع حماية _running)
+    // 11) المزامنة الجماعية
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
-        
-        // ✅ حماية: لو _running عالق لأكثر من 60 ثانية → أعد تعيينه
+
         if (processBatchesInChunks._running) {
             var now = Date.now();
             if (processBatchesInChunks._startTime && (now - processBatchesInChunks._startTime) > 60000) {
@@ -543,7 +599,7 @@
                 return Promise.resolve(false);
             }
         }
-        
+
         processBatchesInChunks._running = true;
         processBatchesInChunks._startTime = Date.now();
 
