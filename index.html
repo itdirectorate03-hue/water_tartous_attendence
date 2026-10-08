@@ -14,61 +14,63 @@
     <style>
         :root { --primary-color: #0056b3; --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ff9800; --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #333; }
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 90vh; }
-        .container { max-width: 480px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; flex: 1; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 12px; display: flex; flex-direction: column; min-height: 100vh; }
+        .container { max-width: 460px; margin: auto; background: var(--card-bg); padding: 18px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; flex: 1; }
 
-        h2 { text-align: center; color: var(--primary-color); margin-bottom: 20px; font-size: 1.4rem; }
+        .title { text-align: center; color: var(--primary-color); font-size: 1.25rem; font-weight: 700; margin: 0 0 2px 0; }
+        .subtitle { text-align: center; color: #64748b; font-size: 0.95rem; font-weight: 600; margin: 0 0 12px 0; }
 
-        .status-banner { width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 15px; }
-        .banner-online { background: #d1fae5; color: #065f46; border: 2px solid #059669; }
-        .banner-offline { background: #fee2e2; color: #991b1b; border: 2px solid #dc2626; }
+        .status-banner { width: 100%; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 10px; }
+        .banner-online { background: #d1fae5; color: #065f46; border: 1px solid #059669; }
+        .banner-offline { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
 
-        .stats-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
-        .stat-box { flex: 1; padding: 8px; border-radius: 8px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; }
-        .stat-number { font-size: 18px; font-weight: bold; display: block; margin-top: 4px; }
+        .stats-container { display: flex; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
+        .stat-box { flex: 1; padding: 6px 8px; border-radius: 8px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .stat-number { font-size: 16px; font-weight: bold; display: block; margin-top: 2px; }
         .stat-sent { color: #2563eb; }
         .stat-pending { color: #d97706; }
 
-        .form-group { margin-bottom: 20px; }
-        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.85rem; color: #475569; }
+        input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 0.95rem; }
         input:focus { border-color: var(--primary-color); outline: none; }
         #empName { font-weight: bold; color: var(--primary-color); background: #eef4fc; border: 1px dashed var(--primary-color); }
-        #msg { margin-top: 5px; font-size: 0.85rem; min-height: 20px; }
+        #msg { margin-top: 3px; font-size: 0.8rem; min-height: 16px; }
         .error-text { color: var(--danger-color); }
         .success-text { color: var(--success-color); }
-        .gps-box { padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; text-align: center; font-weight: bold; line-height: 1.6; }
-        button[type="submit"] { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .gps-box { padding: 8px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; text-align: center; font-weight: bold; line-height: 1.5; }
+        button[type="submit"] { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 6px; }
         button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
-        .retry-gps { background: #6c757d; color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; margin-top: 5px; }
-        #statusBox { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; display: none; }
+        .retry-gps { background: #6c757d; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75rem; cursor: pointer; margin-top: 4px; }
+        #statusBox { margin-top: 10px; padding: 10px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: bold; display: none; }
         .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .status-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
         .status-warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-        footer { text-align: center; margin-top: 30px; font-size: 0.8rem; color: #666; border-top: 1px solid #ddd; padding-top: 15px; }
+        footer { text-align: center; margin-top: 15px; font-size: 0.72rem; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>شركة مياه طرطوس - رابط الدوام</h2>
+        <h1 class="title">شركة مياه طرطوس</h1>
+        <p class="subtitle">رابط الدوام</p>
 
         <div id="connectionBanner" class="status-banner banner-online">🟢 الحالة: متصل (اونلاين)</div>
 
         <div class="stats-container">
             <div class="stat-box">
-                <span style="font-size: 11px; color: #64748b; font-weight: bold;">المرسلة بنجاح</span>
+                <span style="font-size: 10px; color: #64748b; font-weight: bold;">المرسلة بنجاح</span>
                 <span id="sentCount" class="stat-number stat-sent">0</span>
             </div>
             <div class="stat-box">
-                <span style="font-size: 11px; color: #64748b; font-weight: bold;">المعلقة (أوفلاين)</span>
+                <span style="font-size: 10px; color: #64748b; font-weight: bold;">المعلقة (أوفلاين)</span>
                 <span id="pendingCount" class="stat-number stat-pending">0</span>
             </div>
         </div>
 
-        <form id="attendanceForm">
+        <form id="attendanceForm" autocomplete="off">
             <div class="form-group">
                 <label for="empId">الرقم الوظيفي:</label>
-                <input type="number" id="empId" placeholder="أدخل رقمك الوظيفي" required autocomplete="off">
+                <input type="text" id="empId" placeholder="أدخل رقمك الوظيفي" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                 <div id="msg"></div>
             </div>
 
@@ -88,36 +90,35 @@
         <div id="statusBox"></div>
     </div>
 
-    <footer>تم تنفيذ هذا الرابط من قبل مديرية المعلوماتية والتقانة - شركة مياه طرطوس</footer>
+    <footer>مديرية المعلوماتية والتقانة - شركة مياه طرطوس</footer>
 
     <script>
     // ============================================================
-    // 1) تنظيف أي Service Worker قديم (Blob) ثم تسجيل الجديد
+    // 1) تنظيف SW القديم + تسجيل الجديد
     // ============================================================
     if ('serviceWorker' in navigator) {
-        // احذف أي تسجيل قديم أولاً
         navigator.serviceWorker.getRegistrations().then(function (regs) {
-            var cleaned = false;
             regs.forEach(function (reg) {
-                // احذف فقط الـ Blob SW القديم (URL يبدأ بـ blob:)
+                // احذف فقط SW القديم من Blob
                 if (reg.active && reg.active.scriptURL && reg.active.scriptURL.indexOf('blob:') === 0) {
                     reg.unregister();
-                    console.log('Old Blob SW unregistered');
-                    cleaned = true;
                 }
             });
         });
 
-        // سجّل الـ Service Worker الجديد
         window.addEventListener('load', function () {
-            navigator.serviceWorker.register('./service-worker.js')
-                .then(function (reg) { console.log('SW registered:', reg.scope); })
+            navigator.serviceWorker.register('./service-worker.js', { scope: './' })
+                .then(function (reg) {
+                    console.log('SW registered:', reg.scope);
+                    // Force update check
+                    reg.update();
+                })
                 .catch(function (err) { console.log('SW failed:', err); });
         });
     }
 
     // ============================================================
-    // 2) Polyfill: fetch (للمتصفحات القديمة)
+    // 2) Polyfill fetch
     // ============================================================
     if (typeof window.fetch !== 'function') {
         window.fetch = function (url, options) {
@@ -198,12 +199,8 @@
         var now = new Date();
         var utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
         var syria = new Date(utcMs + (3 * 3600000));
-        return syria.getFullYear() + '-' +
-               pad2(syria.getMonth() + 1) + '-' +
-               pad2(syria.getDate()) + ' ' +
-               pad2(syria.getHours()) + ':' +
-               pad2(syria.getMinutes()) + ':' +
-               pad2(syria.getSeconds());
+        return syria.getFullYear() + '-' + pad2(syria.getMonth() + 1) + '-' + pad2(syria.getDate()) +
+               ' ' + pad2(syria.getHours()) + ':' + pad2(syria.getMinutes()) + ':' + pad2(syria.getSeconds());
     }
 
     function getDeviceId() {
@@ -216,24 +213,24 @@
     }
 
     // ============================================================
-    // 5) تحديث الواجهة (Banner + إحصائيات)
+    // 5) UI
     // ============================================================
     function updateUI() {
-        var pendingList = getQueue();
-        var sentCount = parseInt(localStorage.getItem(SENT_COUNT_KEY) || "0", 10);
-
-        if (pendingCountDisplay) pendingCountDisplay.innerText = pendingList.length;
-        if (sentCountDisplay) sentCountDisplay.innerText = sentCount;
-
-        if (connectionBanner) {
-            if (navigator.onLine) {
-                connectionBanner.className = "status-banner banner-online";
-                connectionBanner.innerText = "🟢 الحالة: متصل (اونلاين)";
-            } else {
-                connectionBanner.className = "status-banner banner-offline";
-                connectionBanner.innerText = "🔴 الحالة: غير متصل (اوفلاين)";
+        try {
+            var pendingList = getQueue();
+            var sentCount = parseInt(localStorage.getItem(SENT_COUNT_KEY) || "0", 10);
+            if (pendingCountDisplay) pendingCountDisplay.innerText = pendingList.length;
+            if (sentCountDisplay) sentCountDisplay.innerText = sentCount;
+            if (connectionBanner) {
+                if (navigator.onLine) {
+                    connectionBanner.className = "status-banner banner-online";
+                    connectionBanner.innerText = "🟢 الحالة: متصل (اونلاين)";
+                } else {
+                    connectionBanner.className = "status-banner banner-offline";
+                    connectionBanner.innerText = "🔴 الحالة: غير متصل (اوفلاين)";
+                }
             }
-        }
+        } catch (e) { console.error('updateUI:', e); }
     }
 
     function incrementSentCount(n) {
@@ -247,50 +244,53 @@
     // 6) GPS
     // ============================================================
     function startGpsFetch() {
-        gpsDisplay.innerHTML = "⏳ جاري تحديد موقعك تلقائياً...";
-        gpsDisplay.style.color = "#334155";
-        isGpsValid = false;
-        checkFormValidity();
+        try {
+            gpsDisplay.innerHTML = "⏳ جاري تحديد موقعك تلقائياً...";
+            gpsDisplay.style.color = "#334155";
+            isGpsValid = false;
+            checkFormValidity();
 
-        if (!navigator.geolocation) {
-            gpsDisplay.innerHTML = "❌ متصفحك لا يدعم تحديد الموقع";
-            return;
-        }
+            if (!navigator.geolocation) {
+                gpsDisplay.innerHTML = "❌ متصفحك لا يدعم تحديد الموقع";
+                return;
+            }
 
-        navigator.geolocation.getCurrentPosition(
-            function (pos) {
-                gpsLat = pos.coords.latitude;
-                gpsLng = pos.coords.longitude;
-                gpsAccuracy = Math.round(pos.coords.accuracy);
-                isGpsValid = true;
-                gpsDisplay.innerHTML = '✅ <strong>تم استخراج الموقع بنجاح</strong><br>' +
-                    'خط العرض: ' + gpsLat.toFixed(5) + ' | خط الطول: ' + gpsLng.toFixed(5) + '<br>' +
-                    'الدقة: ~' + gpsAccuracy + ' متر';
-                gpsDisplay.style.color = "#047857";
-                checkFormValidity();
-            },
-            function (err) {
-                gpsLat = null; gpsLng = null; gpsAccuracy = null;
-                isGpsValid = false;
-                var reason = "تعذر الحصول على الموقع";
-                if (err.code === 1) reason = "تم رفض صلاحية الموقع — فعّلها من إعدادات المتصفح";
-                else if (err.code === 2) reason = "الموقع غير متاح حالياً — تأكد من تشغيل GPS";
-                else if (err.code === 3) reason = "انتهت مهلة تحديد الموقع";
-                gpsDisplay.innerHTML = '❌ ' + reason + '<br>' +
-                    '<button type="button" class="retry-gps" onclick="startGpsFetch()">🔄 إعادة المحاولة</button>';
-                gpsDisplay.style.color = "#b91c1c";
-                checkFormValidity();
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
+            navigator.geolocation.getCurrentPosition(
+                function (pos) {
+                    gpsLat = pos.coords.latitude;
+                    gpsLng = pos.coords.longitude;
+                    gpsAccuracy = Math.round(pos.coords.accuracy);
+                    isGpsValid = true;
+                    gpsDisplay.innerHTML = '✅ <strong>تم استخراج الموقع</strong><br>' +
+                        gpsLat.toFixed(5) + ' , ' + gpsLng.toFixed(5) + ' (≈' + gpsAccuracy + 'م)';
+                    gpsDisplay.style.color = "#047857";
+                    checkFormValidity();
+                },
+                function (err) {
+                    gpsLat = null; gpsLng = null; gpsAccuracy = null;
+                    isGpsValid = false;
+                    var reason = "تعذر الحصول على الموقع";
+                    if (err.code === 1) reason = "تم رفض صلاحية الموقع — فعّلها من إعدادات المتصفح";
+                    else if (err.code === 2) reason = "الموقع غير متاح — تأكد من تشغيل GPS";
+                    else if (err.code === 3) reason = "انتهت مهلة تحديد الموقع";
+                    gpsDisplay.innerHTML = '❌ ' + reason + '<br>' +
+                        '<button type="button" class="retry-gps" onclick="startGpsFetch()">🔄 إعادة المحاولة</button>';
+                    gpsDisplay.style.color = "#b91c1c";
+                    checkFormValidity();
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        } catch (e) { console.error('GPS:', e); }
     }
 
     function checkFormValidity() {
-        if (isEmpValid && isGpsValid && !isSending && empIdInput.value.trim() !== "") {
-            submitBtn.disabled = false;
-        } else {
-            submitBtn.disabled = true;
-        }
+        try {
+            if (isEmpValid && isGpsValid && !isSending && empIdInput.value.trim() !== "") {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        } catch (e) { console.error('checkFormValidity:', e); }
     }
 
     function showStatus(msg, type) {
@@ -319,98 +319,97 @@
     // 7) مراقبة الرقم الوظيفي
     // ============================================================
     function handleEmpIdInput() {
-        var val = empIdInput.value.trim();
-        clearTimeout(debounceTimer);
-        isEmpValid = false;
-        empNameInput.value = '';
-        msgDiv.textContent = '';
-        checkFormValidity();
-        if (!val) return;
+        try {
+            var val = empIdInput.value.trim();
+            clearTimeout(debounceTimer);
+            isEmpValid = false;
+            empNameInput.value = '';
+            msgDiv.textContent = '';
+            checkFormValidity();
+            if (!val) return;
 
-        var cacheHit = false;
-        var cachedStr = localStorage.getItem('cached_emp_names');
-        if (cachedStr) {
-            try {
-                var map = JSON.parse(cachedStr);
-                if (map[val] && map[val].name) {
-                    empData = map[val];
-                    empNameInput.value = empData.name;
-                    msgDiv.textContent = navigator.onLine
-                        ? "✓ موظف موجود في قاعدة البيانات (جاري التحديث...)"
-                        : "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
-                    msgDiv.className = "success-text";
-                    isEmpValid = true;
-                    checkFormValidity();
-                    cacheHit = true;
-                }
-            } catch (e) {}
-        }
-
-        if (!navigator.onLine) {
-            if (!cacheHit) {
-                msgDiv.textContent = "❌ غير موجود محلياً، يلزم إنترنت للتحقق";
-                msgDiv.className = "error-text";
-            }
-            return;
-        }
-
-        if (!cacheHit) {
-            msgDiv.textContent = "⏳ جاري التحقق...";
-            msgDiv.className = "";
-        }
-
-        debounceTimer = setTimeout(function () {
-            if (empIdInput.value.trim() !== val) return;
-
-            fetchWithTimeout(SCRIPT_URL + "?action=getEmpName&empId=" + encodeURIComponent(val), {}, 10000)
-                .then(function (res) { return res.json(); })
-                .then(function (result) {
-                    if (empIdInput.value.trim() !== val) return;
-
-                    if (result.success && result.empName) {
-                        empData = {
-                            name: result.empName,
-                            dept: result.dept || '',
-                            jobType: result.jobType || '',
-                            workPlace: result.workPlace || ''
-                        };
+            var cacheHit = false;
+            var cachedStr = localStorage.getItem('cached_emp_names');
+            if (cachedStr) {
+                try {
+                    var map = JSON.parse(cachedStr);
+                    if (map[val] && map[val].name) {
+                        empData = map[val];
                         empNameInput.value = empData.name;
-                        msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
+                        msgDiv.textContent = navigator.onLine
+                            ? "✓ موظف موجود في قاعدة البيانات (جاري التحديث...)"
+                            : "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
                         msgDiv.className = "success-text";
                         isEmpValid = true;
-
-                        try {
-                            var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
-                            map[val] = empData;
-                            localStorage.setItem('cached_emp_names', JSON.stringify(map));
-                        } catch (e) {}
-
                         checkFormValidity();
-                    } else {
-                        msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
-                        msgDiv.className = "error-text";
-                        isEmpValid = false;
+                        cacheHit = true;
+                    }
+                } catch (e) {}
+            }
+
+            if (!navigator.onLine) {
+                if (!cacheHit) {
+                    msgDiv.textContent = "❌ غير موجود محلياً، يلزم إنترنت للتحقق";
+                    msgDiv.className = "error-text";
+                }
+                return;
+            }
+
+            if (!cacheHit) {
+                msgDiv.textContent = "⏳ جاري التحقق...";
+                msgDiv.className = "";
+            }
+
+            debounceTimer = setTimeout(function () {
+                if (empIdInput.value.trim() !== val) return;
+
+                fetchWithTimeout(SCRIPT_URL + "?action=getEmpName&empId=" + encodeURIComponent(val), {}, 10000)
+                    .then(function (res) { return res.json(); })
+                    .then(function (result) {
+                        if (empIdInput.value.trim() !== val) return;
+                        if (result.success && result.empName) {
+                            empData = {
+                                name: result.empName,
+                                dept: result.dept || '',
+                                jobType: result.jobType || '',
+                                workPlace: result.workPlace || ''
+                            };
+                            empNameInput.value = empData.name;
+                            msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
+                            msgDiv.className = "success-text";
+                            isEmpValid = true;
+                            try {
+                                var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
+                                map[val] = empData;
+                                localStorage.setItem('cached_emp_names', JSON.stringify(map));
+                            } catch (e) {}
+                            checkFormValidity();
+                        } else {
+                            msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
+                            msgDiv.className = "error-text";
+                            isEmpValid = false;
+                            checkFormValidity();
+                        }
+                    })
+                    .catch(function () {
+                        if (empIdInput.value.trim() !== val) return;
+                        if (cacheHit) {
+                            msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
+                            msgDiv.className = "success-text";
+                            isEmpValid = true;
+                        } else {
+                            msgDiv.textContent = "❌ تعذر الاتصال بالسيرفر";
+                            msgDiv.className = "error-text";
+                            isEmpValid = false;
+                        }
                         checkFormValidity();
-                    }
-                })
-                .catch(function () {
-                    if (empIdInput.value.trim() !== val) return;
-                    if (cacheHit) {
-                        msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
-                        msgDiv.className = "success-text";
-                        isEmpValid = true;
-                    } else {
-                        msgDiv.textContent = "❌ تعذر الاتصال بالسيرفر";
-                        msgDiv.className = "error-text";
-                        isEmpValid = false;
-                    }
-                    checkFormValidity();
-                });
-        }, 300);
+                    });
+            }, 300);
+        } catch (e) { console.error('handleEmpIdInput:', e); }
     }
 
     // ============================================================
-    // 8) الإرسال الفردي
+    // 8) الإرسال
     // ============================================================
     function sendSingleWithTimeout(payload) {
         return fetchWithTimeout(SCRIPT_URL, {
@@ -497,11 +496,12 @@
     }
 
     function getQueue() {
-        return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+        try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+        catch (e) { return []; }
     }
 
     // ============================================================
-    // 9) مزامنة الأوفلاين (دفعات + حذف انتقائي)
+    // 9) المزامنة الجماعية
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
@@ -532,7 +532,6 @@
                 return res.json();
             }).then(function (data) {
                 var q = getQueue();
-
                 if (data && data.success) {
                     q.splice(0, chunk.length);
                     localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
@@ -555,10 +554,7 @@
                     updateUI();
                     return false;
                 }
-
-                return new Promise(function (resolve) {
-                    setTimeout(resolve, 800);
-                }).then(processNext);
+                return new Promise(function (r) { setTimeout(r, 800); }).then(processNext);
             }).catch(function () {
                 processBatchesInChunks._running = false;
                 updateUI();
@@ -573,9 +569,6 @@
         return processNext();
     }
 
-    // ============================================================
-    // 10) إعادة محاولة المزامنة كل 30 ثانية (فقط إذا في queue)
-    // ============================================================
     function scheduleSyncRetry() {
         if (syncRetryTimer) return;
         syncRetryTimer = setInterval(function () {
@@ -586,66 +579,81 @@
     }
 
     // ============================================================
-    // 11) التشغيل
+    // 10) التشغيل
     // ============================================================
     function init() {
-        empIdInput = document.getElementById('empId');
-        empNameInput = document.getElementById('empName');
-        msgDiv = document.getElementById('msg');
-        gpsDisplay = document.getElementById('gpsDisplay');
-        submitBtn = document.getElementById('submitBtn');
-        statusBox = document.getElementById('statusBox');
-        connectionBanner = document.getElementById('connectionBanner');
-        sentCountDisplay = document.getElementById('sentCount');
-        pendingCountDisplay = document.getElementById('pendingCount');
+        try {
+            empIdInput = document.getElementById('empId');
+            empNameInput = document.getElementById('empName');
+            msgDiv = document.getElementById('msg');
+            gpsDisplay = document.getElementById('gpsDisplay');
+            submitBtn = document.getElementById('submitBtn');
+            statusBox = document.getElementById('statusBox');
+            connectionBanner = document.getElementById('connectionBanner');
+            sentCountDisplay = document.getElementById('sentCount');
+            pendingCountDisplay = document.getElementById('pendingCount');
 
-        empIdInput.addEventListener('input', handleEmpIdInput);
-        document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+            // ✅ حماية: تأكد أن حقل الرقم دائماً مفتوح
+            empIdInput.disabled = false;
+            empIdInput.readOnly = false;
+            empIdInput.style.pointerEvents = 'auto';
+            empIdInput.style.opacity = '1';
 
-        window.addEventListener('online', function () {
-            updateUI();
+            empIdInput.addEventListener('input', handleEmpIdInput);
+            document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+
+            window.addEventListener('online', function () {
+                updateUI();
+                updateLocalEmployeesCache();
+                processBatchesInChunks();
+            });
+            window.addEventListener('offline', function () { updateUI(); });
+            window.addEventListener('focus', function () {
+                if (navigator.onLine) processBatchesInChunks();
+            });
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'visible' && navigator.onLine) {
+                    processBatchesInChunks();
+                }
+            });
+            window.addEventListener('beforeunload', function (e) {
+                if (getQueue().length > 0) {
+                    e.preventDefault();
+                    e.returnValue = 'لديك بصمات لم تُرسل بعد. هل تريد إغلاق الصفحة؟';
+                    return e.returnValue;
+                }
+            });
+
+            startGpsFetch();
             updateLocalEmployeesCache();
-            processBatchesInChunks();
-        });
-        window.addEventListener('offline', function () {
             updateUI();
-        });
-        window.addEventListener('focus', function () {
-            if (navigator.onLine) processBatchesInChunks();
-        });
-        document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible' && navigator.onLine) {
+
+            var pendingOnLoad = getQueue().length;
+            if (pendingOnLoad > 0) {
+                showStatus("⏳ لديك " + pendingOnLoad + " بصمة معلقة، جاري محاولة الإرسال...", "warning");
+            }
+            if (navigator.onLine) {
                 processBatchesInChunks();
+                fetchWithTimeout(SCRIPT_URL + "?action=ping", {}, 5000).catch(function () {});
             }
-        });
-        window.addEventListener('beforeunload', function (e) {
-            if (getQueue().length > 0) {
-                e.preventDefault();
-                e.returnValue = 'لديك بصمات لم تُرسل بعد. هل تريد إغلاق الصفحة؟';
-                return e.returnValue;
-            }
-        });
+            setTimeout(function () {
+                if (navigator.onLine && getQueue().length > 0) {
+                    processBatchesInChunks();
+                }
+            }, 2000);
 
-        startGpsFetch();
-        updateLocalEmployeesCache();
-        updateUI();
-
-        // محاولة إرسال البصمات المعلقة فوراً عند فتح الصفحة
-        var pendingOnLoad = getQueue().length;
-        if (pendingOnLoad > 0) {
-            showStatus("⏳ لديك " + pendingOnLoad + " بصمة معلقة، جاري محاولة الإرسال...", "warning");
+            scheduleSyncRetry();
+        } catch (err) {
+            console.error('Init error:', err);
+            // حماية أخيرة: افتح الحقل حتى لو فيه خطأ
+            try {
+                var input = document.getElementById('empId');
+                if (input) {
+                    input.disabled = false;
+                    input.readOnly = false;
+                }
+            } catch (e) {}
         }
-        if (navigator.onLine) {
-            processBatchesInChunks();
-            fetchWithTimeout(SCRIPT_URL + "?action=ping", {}, 5000).catch(function () {});
-        }
-        setTimeout(function () {
-            if (navigator.onLine && getQueue().length > 0) {
-                processBatchesInChunks();
-            }
-        }, 2000);
-
-        scheduleSyncRetry();
     }
 
     if (document.readyState === 'loading') {
