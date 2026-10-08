@@ -239,7 +239,7 @@
     // ============================================================
     // 4) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzcBUvIB4qWBt3Hr5phEgye6VqL3AJ4h3yGs7HNGamxnpHtwRmjBw4wGgymliPfJFb_xA/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9tydOh-fUh3CqmwBLRpLqyZF0IK3iSpVUJ_6cBJ1oS-egBbYj7NzNdy3rFYXcLPRlRA/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -254,6 +254,24 @@
 
     var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, statusBox;
     var connectionBanner, sentCountDisplay, pendingCountDisplay;
+
+    // ============================================================
+    // ✅ دالة: تنسيق التاريخ بتوقيت سوريا GMT+3
+    // ============================================================
+    function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function getSyriaTimeString() {
+        var now = new Date();
+        // UTC + 3 ساعات
+        var utcMs = now.getTime() + (now.getTimezoneOffset() * 60000);
+        var syria = new Date(utcMs + (3 * 3600000));
+        return syria.getFullYear() + '-' +
+               pad2(syria.getMonth() + 1) + '-' +
+               pad2(syria.getDate()) + ' ' +
+               pad2(syria.getHours()) + ':' +
+               pad2(syria.getMinutes()) + ':' +
+               pad2(syria.getSeconds());
+    }
 
     function getDeviceId() {
         var id = localStorage.getItem('device_unique_id');
@@ -496,7 +514,7 @@
             latitude: gpsLat,
             longitude: gpsLng,
             accuracy: gpsAccuracy,
-            deviceTimestamp: new Date().toISOString(),
+            deviceTimestamp: getSyriaTimeString(),   // ✅ توقيت سوريا GMT+3
             deviceId: getDeviceId(),
             origin: origin
         };
