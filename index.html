@@ -7,13 +7,27 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="الحضور">
-    <title>تسجيل الحضور - شركة مياه طرطوس</title>
+    <title>شركة مياه طرطوس - رابط الدوام</title>
     <style>
         :root { --primary-color: #0056b3; --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ff9800; --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #333; }
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; min-height: 90vh; }
         .container { max-width: 480px; margin: auto; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; flex: 1; }
-        h2 { text-align: center; color: var(--primary-color); margin-bottom: 25px; font-size: 1.4rem; }
+
+        h2 { text-align: center; color: var(--primary-color); margin-bottom: 20px; font-size: 1.4rem; }
+
+        /* شريط حالة الاتصال */
+        .status-banner { width: 100%; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 15px; }
+        .banner-online { background: #d1fae5; color: #065f46; border: 2px solid #059669; }
+        .banner-offline { background: #fee2e2; color: #991b1b; border: 2px solid #dc2626; }
+
+        /* صناديق الإحصائيات */
+        .stats-container { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 10px; }
+        .stat-box { flex: 1; padding: 8px; border-radius: 8px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; }
+        .stat-number { font-size: 18px; font-weight: bold; display: block; margin-top: 4px; }
+        .stat-sent { color: #2563eb; }
+        .stat-pending { color: #d97706; }
+
         .form-group { margin-bottom: 20px; }
         label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.95rem; }
         input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; }
@@ -26,7 +40,6 @@
         button[type="submit"] { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
         .retry-gps { background: #6c757d; color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 0.8rem; cursor: pointer; margin-top: 5px; }
-        #offlineBadge { background: var(--warning-color); color: #fff; padding: 8px 10px; border-radius: 4px; font-size: 0.85rem; text-align: center; margin-bottom: 15px; display: none; font-weight: bold; }
         #statusBox { margin-top: 15px; padding: 12px; border-radius: 6px; text-align: center; font-size: 14px; font-weight: bold; display: none; }
         .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .status-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -36,8 +49,22 @@
 </head>
 <body>
     <div class="container">
-        <h2>تسجيل حضور العاملين</h2>
-        <div id="offlineBadge">📴 وضع عدم الاتصال — سيتم الحفظ والإرسال لاحقاً</div>
+        <h2>شركة مياه طرطوس - رابط الدوام</h2>
+
+        <!-- شريط حالة الاتصال -->
+        <div id="connectionBanner" class="status-banner banner-online">🟢 الحالة: متصل (اونلاين)</div>
+
+        <!-- صناديق الإحصائيات -->
+        <div class="stats-container">
+            <div class="stat-box">
+                <span style="font-size: 11px; color: #64748b; font-weight: bold;">المرسلة بنجاح</span>
+                <span id="sentCount" class="stat-number stat-sent">0</span>
+            </div>
+            <div class="stat-box">
+                <span style="font-size: 11px; color: #64748b; font-weight: bold;">المعلقة (أوفلاين)</span>
+                <span id="pendingCount" class="stat-number stat-pending">0</span>
+            </div>
+        </div>
 
         <form id="attendanceForm">
             <div class="form-group">
@@ -66,10 +93,9 @@
 
     <script>
     // ============================================================
-    // 1) توليد الـ Manifest كـ Data URI (يحتوي أيقونة SVG للقطرة)
+    // 1) توليد الـ Manifest كـ Data URI (أيقونة قطرة مياه)
     // ============================================================
     (function generateManifest() {
-        // أيقونة SVG على شكل قطرة مياه (مشفرة URL-encoded)
         var svgIcon = "data:image/svg+xml;utf8," +
             encodeURIComponent(
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
@@ -104,13 +130,11 @@
         link.href = url;
         document.head.appendChild(link);
 
-        // أيقونة Apple للـ iPhone
         var appleIcon = document.createElement('link');
         appleIcon.rel = 'apple-touch-icon';
         appleIcon.href = svgIcon;
         document.head.appendChild(appleIcon);
 
-        // Favicon
         var favicon = document.createElement('link');
         favicon.rel = 'icon';
         favicon.href = svgIcon;
@@ -118,7 +142,7 @@
     })();
 
     // ============================================================
-    // 2) تسجيل الـ Service Worker من Blob (يعمل بدون ملف خارجي)
+    // 2) Service Worker من Blob
     // ============================================================
     (function registerServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
@@ -164,7 +188,7 @@
     })();
 
     // ============================================================
-    // 3) Polyfill: fetch للمتصفحات القديمة
+    // 3) Polyfill: fetch
     // ============================================================
     if (typeof window.fetch !== 'function') {
         window.fetch = function (url, options) {
@@ -202,9 +226,6 @@
         };
     }
 
-    // ============================================================
-    // 4) fetch مع مهلة
-    // ============================================================
     function fetchWithTimeout(url, options, timeoutMs) {
         return new Promise(function (resolve, reject) {
             var done = false;
@@ -220,10 +241,11 @@
     }
 
     // ============================================================
-    // 5) الإعدادات والحالة
+    // 4) الإعدادات
     // ============================================================
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzZiGmt7lLQCBUECBMBpldTJMRHfYXdi1go1Bv_SkKmEL4u-Gw8ZqBOOhPio2zoRJc2yQ/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
+    var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
     var SEND_TIMEOUT_MS = 30000;
 
@@ -234,7 +256,8 @@
     var empData = { name: '', dept: '', jobType: '', workPlace: '' };
     var debounceTimer = null;
 
-    var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, offlineBadge, statusBox;
+    var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, statusBox;
+    var connectionBanner, sentCountDisplay, pendingCountDisplay;
 
     function getDeviceId() {
         var id = localStorage.getItem('device_unique_id');
@@ -243,6 +266,34 @@
             localStorage.setItem('device_unique_id', id);
         }
         return id;
+    }
+
+    // ============================================================
+    // 5) تحديث الإحصائيات + شريط الحالة
+    // ============================================================
+    function updateUI() {
+        var pendingList = getQueue();
+        var sentCount = parseInt(localStorage.getItem(SENT_COUNT_KEY) || "0", 10);
+
+        if (pendingCountDisplay) pendingCountDisplay.innerText = pendingList.length;
+        if (sentCountDisplay) sentCountDisplay.innerText = sentCount;
+
+        if (connectionBanner) {
+            if (navigator.onLine) {
+                connectionBanner.className = "status-banner banner-online";
+                connectionBanner.innerText = "🟢 الحالة: متصل (اونلاين)";
+            } else {
+                connectionBanner.className = "status-banner banner-offline";
+                connectionBanner.innerText = "🔴 الحالة: غير متصل (اوفلاين)";
+            }
+        }
+    }
+
+    function incrementSentCount(n) {
+        var current = parseInt(localStorage.getItem(SENT_COUNT_KEY) || "0", 10);
+        current += n;
+        localStorage.setItem(SENT_COUNT_KEY, current.toString());
+        updateUI();
     }
 
     // ============================================================
@@ -318,7 +369,7 @@
     }
 
     // ============================================================
-    // 7) مراقبة إدخال الرقم الوظيفي
+    // 7) مراقبة الرقم الوظيفي
     // ============================================================
     function handleEmpIdInput() {
         var val = empIdInput.value.trim();
@@ -338,8 +389,8 @@
                     empData = map[val];
                     empNameInput.value = empData.name;
                     msgDiv.textContent = navigator.onLine
-                        ? "✓ موظف معتمد (جاري التحديث...)"
-                        : "✓ موظف معتمد (من الذاكرة)";
+                        ? "✓ موظف موجود في قاعدة البيانات (جاري التحديث...)"
+                        : "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
                     msgDiv.className = "success-text";
                     isEmpValid = true;
                     checkFormValidity();
@@ -377,7 +428,7 @@
                             workPlace: result.workPlace || ''
                         };
                         empNameInput.value = empData.name;
-                        msgDiv.textContent = "✓ موظف معتمد";
+                        msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
                         msgDiv.className = "success-text";
                         isEmpValid = true;
 
@@ -398,7 +449,7 @@
                 .catch(function () {
                     if (empIdInput.value.trim() !== val) return;
                     if (cacheHit) {
-                        msgDiv.textContent = "✓ موظف معتمد (من الذاكرة)";
+                        msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
                         msgDiv.className = "success-text";
                         isEmpValid = true;
                     } else {
@@ -452,7 +503,8 @@
 
         var afterResult = function (result) {
             if (result === 'success') {
-                showStatus("✅ تم تسجيل الحضور بنجاح في السيرفر", "success");
+                incrementSentCount(1);
+                showStatus("✅ تم تسجيل الحضور بنجاح", "success");
                 hideStatus(5000);
             } else if (result === 'rejected') {
                 showStatus("❌ رفض السيرفر الطلب — تحقق من رقمك الوظيفي", "error");
@@ -476,6 +528,7 @@
             isSending = false;
             submitBtn.textContent = "إثبات الحضور";
             checkFormValidity();
+            updateUI();
             setTimeout(startGpsFetch, 800);
         };
 
@@ -490,6 +543,7 @@
         var q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
         q.push(payload);
         localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+        updateUI();
     }
 
     function getQueue() {
@@ -505,6 +559,7 @@
             var queue = getQueue();
             if (queue.length === 0) {
                 processBatchesInChunks._running = false;
+                updateUI();
                 return Promise.resolve(true);
             }
 
@@ -522,13 +577,17 @@
                 if (data && data.success) {
                     q.splice(0, chunk.length);
                     localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+                    incrementSentCount(chunk.length);
                 } else if (data && typeof data.processed === 'number' && data.processed > 0) {
                     q.splice(0, data.processed);
                     localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+                    incrementSentCount(data.processed);
                     processBatchesInChunks._running = false;
+                    updateUI();
                     return false;
                 } else {
                     processBatchesInChunks._running = false;
+                    updateUI();
                     return false;
                 }
 
@@ -537,6 +596,7 @@
                 }).then(processNext);
             }).catch(function () {
                 processBatchesInChunks._running = false;
+                updateUI();
                 return false;
             });
         }
@@ -553,19 +613,21 @@
         msgDiv = document.getElementById('msg');
         gpsDisplay = document.getElementById('gpsDisplay');
         submitBtn = document.getElementById('submitBtn');
-        offlineBadge = document.getElementById('offlineBadge');
         statusBox = document.getElementById('statusBox');
+        connectionBanner = document.getElementById('connectionBanner');
+        sentCountDisplay = document.getElementById('sentCount');
+        pendingCountDisplay = document.getElementById('pendingCount');
 
         empIdInput.addEventListener('input', handleEmpIdInput);
         document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
 
         window.addEventListener('online', function () {
-            offlineBadge.style.display = 'none';
+            updateUI();
             updateLocalEmployeesCache();
             processBatchesInChunks();
         });
         window.addEventListener('offline', function () {
-            offlineBadge.style.display = 'block';
+            updateUI();
         });
         document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'visible' && navigator.onLine) {
@@ -582,7 +644,8 @@
 
         startGpsFetch();
         updateLocalEmployeesCache();
-        if (!navigator.onLine) offlineBadge.style.display = 'block';
+        updateUI();
+
         if (navigator.onLine) {
             setTimeout(function () { processBatchesInChunks(); }, 1500);
         }
