@@ -188,7 +188,7 @@
     // ============================================================
     // 4) الإعدادات
     // ============================================================
-    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNm4UUxWyglBoNNakUhuiHTzdo0R7mm44-yhzVuUEfopbFdiOhyQldzCGODhyeUqc1ig/exec";
+    var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrRNt11b_pYoQxx209my2csbQQGb5leLiN07QlbJ_vj8VPwlixBZ67ggN5WzLUxKXR-A/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
@@ -323,13 +323,25 @@
         setTimeout(function () { statusBox.style.display = 'none'; }, delay || 5000);
     }
 
+    // ✅ التعديل 2: updateLocalEmployeesCache مع فحص 24 ساعة
     function updateLocalEmployeesCache() {
         if (!navigator.onLine) return;
+        
+        // ✅ فحص: هل مرّ 24 ساعة من آخر تحديث؟
+        var lastUpdate = localStorage.getItem('emp_cache_last_update');
+        var now = Date.now();
+        var TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        
+        if (lastUpdate && (now - parseInt(lastUpdate, 10)) < TWENTY_FOUR_HOURS) {
+            return;  // ← حُمّل حديثاً → لا تحمّل
+        }
+        
         fetchWithTimeout(SCRIPT_URL + "?action=getAllEmployees", {}, 15000)
             .then(function (res) { return res.json(); })
             .then(function (data) {
                 if (data.success && data.employees) {
                     localStorage.setItem('cached_emp_names', JSON.stringify(data.employees));
+                    localStorage.setItem('emp_cache_last_update', now.toString());
                 }
             })
             .catch(function () {});
@@ -386,10 +398,11 @@
                 msgDiv.className = "";
             }
 
+            // ✅ التعديل 3: Debounce 1000ms بدل 300ms
             debounceTimer = setTimeout(function () {
                 if (empIdInput.value.trim() !== val) return;
                 fetchEmployeeName(val, cacheHit, 1);
-            }, 300);
+            }, 1000);
         } catch (e) { console.error('handleEmpIdInput:', e); }
     }
 
@@ -496,7 +509,6 @@
                     mode: 'no-cors',
                     body: JSON.stringify(payload)
                 }).then(function () {
-                    // الطلب أُرسل → نعتبره نجاح (Idempotency يمنع التكرار)
                     setTimeout(function () { resolve('success'); }, 1200);
                 }).catch(function () {
                     resolve('offline');
@@ -587,7 +599,7 @@
     }
 
     // ============================================================
-    // 11) المزامنة الجماعية (no-cors بدون انتظار رد)
+    // 11) المزامنة الجماعية
     // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
@@ -628,7 +640,6 @@
                         mode: 'no-cors',
                         body: JSON.stringify(chunk)
                     }).then(function () {
-                        // الطلب أُرسل → احذف من queue بعد 1.2 ثانية
                         setTimeout(function () {
                             var q = getQueue();
                             q.splice(0, chunk.length);
@@ -693,9 +704,10 @@
             empIdInput.addEventListener('input', handleEmpIdInput);
             document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
 
+            // ✅ التعديل 4: لا تحدّث الكاش عند عودة النت
             window.addEventListener('online', function () {
                 updateUI();
-                updateLocalEmployeesCache();
+                // updateLocalEmployeesCache(); ← تم حذفها
                 processBatchesInChunks();
             });
             window.addEventListener('offline', function () { updateUI(); });
