@@ -9,27 +9,23 @@
     <meta name="apple-mobile-web-app-title" content="الحضور">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon-512.png">
     <title>شركة مياه طرطوس - رابط الدوام</title>
     <style>
         :root { --primary-color: #0056b3; --success-color: #28a745; --danger-color: #dc3545; --warning-color: #ff9800; --bg-color: #f4f7f6; --card-bg: #ffffff; --text-color: #333; }
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 12px; display: flex; flex-direction: column; min-height: 100vh; }
         .container { max-width: 460px; margin: auto; background: var(--card-bg); padding: 18px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); width: 100%; flex: 1; }
-
         .title { text-align: center; color: var(--primary-color); font-size: 1.25rem; font-weight: 700; margin: 0 0 2px 0; }
         .subtitle { text-align: center; color: #64748b; font-size: 0.95rem; font-weight: 600; margin: 0 0 12px 0; }
-
         .status-banner { width: 100%; padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 10px; }
         .banner-online { background: #d1fae5; color: #065f46; border: 1px solid #059669; }
         .banner-offline { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
-
         .stats-container { display: flex; justify-content: space-between; margin-bottom: 12px; gap: 8px; }
         .stat-box { flex: 1; padding: 6px 8px; border-radius: 8px; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; }
         .stat-number { font-size: 16px; font-weight: bold; display: block; margin-top: 2px; }
         .stat-sent { color: #2563eb; }
         .stat-pending { color: #d97706; }
-
         .form-group { margin-bottom: 10px; }
         label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.85rem; color: #475569; }
         input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 0.95rem; }
@@ -42,6 +38,7 @@
         button[type="submit"] { width: 100%; padding: 12px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 6px; }
         button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.7; }
         .retry-gps { background: #6c757d; color: white; border: none; border-radius: 4px; padding: 3px 8px; font-size: 0.75rem; cursor: pointer; margin-top: 4px; }
+        #installBtn { display: none; width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 8px; }
         #statusBox { margin-top: 10px; padding: 10px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: bold; display: none; }
         .status-success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .status-error { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -73,19 +70,18 @@
                 <input type="text" id="empId" placeholder="أدخل رقمك الوظيفي" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                 <div id="msg"></div>
             </div>
-
             <div class="form-group">
                 <label for="empName">اسم الموظف:</label>
                 <input type="text" id="empName" readonly placeholder="سيظهر الاسم تلقائياً">
             </div>
-
             <div class="form-group">
                 <label>موقع الـ GPS:</label>
                 <div id="gpsDisplay" class="gps-box">⏳ جاري تحديد موقعك تلقائياً...</div>
             </div>
-
             <button type="submit" id="submitBtn" disabled>إرسال</button>
         </form>
+
+        <button type="button" id="installBtn">⬇️ تثبيت التطبيق على الجوال</button>
 
         <div id="statusBox"></div>
     </div>
@@ -93,9 +89,6 @@
     <footer>مديرية المعلوماتية والتقانة - شركة مياه طرطوس</footer>
 
     <script>
-    // ============================================================
-    // 1) تنظيف SW القديم + تسجيل الجديد
-    // ============================================================
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function (regs) {
             regs.forEach(function (reg) {
@@ -104,20 +97,13 @@
                 }
             });
         });
-
         window.addEventListener('load', function () {
             navigator.serviceWorker.register('./service-worker.js', { scope: './' })
-                .then(function (reg) {
-                    console.log('SW registered:', reg.scope);
-                    reg.update();
-                })
+                .then(function (reg) { reg.update(); })
                 .catch(function (err) { console.log('SW failed:', err); });
         });
     }
 
-    // ============================================================
-    // 2) Polyfill fetch
-    // ============================================================
     if (typeof window.fetch !== 'function') {
         window.fetch = function (url, options) {
             options = options || {};
@@ -154,21 +140,16 @@
         };
     }
 
-    // ============================================================
-    // 3) fetch مع Timeout
-    // ============================================================
     function fetchWithTimeout(url, options, timeoutMs) {
         return new Promise(function (resolve, reject) {
             var controller = null;
             var timer = null;
             var done = false;
-
             if (typeof AbortController !== 'undefined') {
                 controller = new AbortController();
                 options = options || {};
                 options.signal = controller.signal;
             }
-
             timer = setTimeout(function () {
                 if (!done) {
                     done = true;
@@ -176,7 +157,6 @@
                     reject(new Error('Timeout'));
                 }
             }, timeoutMs);
-
             fetch(url, options).then(function (res) {
                 if (!done) { done = true; clearTimeout(timer); resolve(res); }
             }).catch(function (err) {
@@ -185,14 +165,10 @@
         });
     }
 
-    // ============================================================
-    // 4) الإعدادات
-    // ============================================================
     var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzrRNt11b_pYoQxx209my2csbQQGb5leLiN07QlbJ_vj8VPwlixBZ67ggN5WzLUxKXR-A/exec";
     var QUEUE_KEY = 'offline_attendance_queue';
     var SENT_COUNT_KEY = 'successful_sent_count';
     var CHUNK_SIZE = 25;
-    var SEND_TIMEOUT_MS = 30000;
 
     var isEmpValid = false;
     var isGpsValid = false;
@@ -206,9 +182,6 @@
     var empIdInput, empNameInput, msgDiv, gpsDisplay, submitBtn, statusBox;
     var connectionBanner, sentCountDisplay, pendingCountDisplay;
 
-    // ============================================================
-    // 5) توقيت سوريا GMT+3
-    // ============================================================
     function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
     function getSyriaTimeString() {
@@ -232,9 +205,6 @@
         return 'REC-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10);
     }
 
-    // ============================================================
-    // 6) تحديث الواجهة
-    // ============================================================
     function updateUI() {
         try {
             var pendingList = getQueue();
@@ -260,21 +230,16 @@
         updateUI();
     }
 
-    // ============================================================
-    // 7) GPS
-    // ============================================================
     function startGpsFetch() {
         try {
             gpsDisplay.innerHTML = "⏳ جاري تحديد موقعك تلقائياً...";
             gpsDisplay.style.color = "#334155";
             isGpsValid = false;
             checkFormValidity();
-
             if (!navigator.geolocation) {
                 gpsDisplay.innerHTML = "❌ متصفحك لا يدعم تحديد الموقع";
                 return;
             }
-
             navigator.geolocation.getCurrentPosition(
                 function (pos) {
                     gpsLat = pos.coords.latitude;
@@ -323,18 +288,14 @@
         setTimeout(function () { statusBox.style.display = 'none'; }, delay || 5000);
     }
 
-    // ✅ updateLocalEmployeesCache مع فحص 24 ساعة
     function updateLocalEmployeesCache() {
         if (!navigator.onLine) return;
-        
         var lastUpdate = localStorage.getItem('emp_cache_last_update');
         var now = Date.now();
         var TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-        
         if (lastUpdate && (now - parseInt(lastUpdate, 10)) < TWENTY_FOUR_HOURS) {
             return;
         }
-        
         fetchWithTimeout(SCRIPT_URL + "?action=getAllEmployees", {}, 15000)
             .then(function (res) { return res.json(); })
             .then(function (data) {
@@ -346,19 +307,14 @@
             .catch(function () {});
     }
 
-    // ============================================================
-    // 8) مراقبة الرقم الوظيفي
-    // ============================================================
     function handleEmpIdInput() {
         try {
             var val = empIdInput.value.trim();
             clearTimeout(debounceTimer);
-
             if (lastSearchController) {
                 try { lastSearchController.abort(); } catch (e) {}
                 lastSearchController = null;
             }
-
             isEmpValid = false;
             empNameInput.value = '';
             msgDiv.textContent = '';
@@ -404,23 +360,19 @@
         } catch (e) { console.error('handleEmpIdInput:', e); }
     }
 
-    // بحث مع Retry تلقائي
     function fetchEmployeeName(empId, cacheHit, attempt) {
         if (lastSearchController) {
             try { lastSearchController.abort(); } catch (e) {}
         }
         lastSearchController = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-
         if (attempt === 1 && !cacheHit) {
             msgDiv.textContent = "⏳ جاري التحقق...";
             msgDiv.className = "";
         }
-
         var controller = lastSearchController;
         var timer = setTimeout(function () {
             if (controller) { try { controller.abort(); } catch (e) {} }
         }, 20000);
-
         var fetchOptions = {};
         if (controller) fetchOptions.signal = controller.signal;
 
@@ -432,7 +384,6 @@
             })
             .then(function (result) {
                 if (empIdInput.value.trim() !== empId) return;
-
                 if (result.success && result.empName) {
                     empData = {
                         name: result.empName,
@@ -444,13 +395,11 @@
                     msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات";
                     msgDiv.className = "success-text";
                     isEmpValid = true;
-
                     try {
                         var map = JSON.parse(localStorage.getItem('cached_emp_names') || '{}');
                         map[empId] = empData;
                         localStorage.setItem('cached_emp_names', JSON.stringify(map));
                     } catch (e) {}
-
                     checkFormValidity();
                 } else {
                     msgDiv.textContent = "❌ الرقم غير موجود في قاعدة البيانات";
@@ -462,27 +411,20 @@
             .catch(function (err) {
                 clearTimeout(timer);
                 if (empIdInput.value.trim() !== empId) return;
-
-                if (err && err.name === 'AbortError' && empIdInput.value.trim() !== empId) {
-                    return;
-                }
-
+                if (err && err.name === 'AbortError' && empIdInput.value.trim() !== empId) return;
                 if (attempt < 4) {
                     var waitTimes = { 1: 1500, 2: 2500, 3: 3500 };
                     var wait = waitTimes[attempt] || 3500;
-
                     if (!cacheHit) {
                         msgDiv.textContent = "⏳ السيرفر يستغرق وقتاً... جاري المحاولة (" + (attempt + 1) + "/4)";
                         msgDiv.className = "";
                     }
-
                     setTimeout(function () {
                         if (empIdInput.value.trim() !== empId) return;
                         fetchEmployeeName(empId, cacheHit, attempt + 1);
                     }, wait);
                     return;
                 }
-
                 if (cacheHit) {
                     msgDiv.textContent = "✓ موظف موجود في قاعدة البيانات (من الذاكرة)";
                     msgDiv.className = "success-text";
@@ -496,9 +438,6 @@
             });
     }
 
-    // ============================================================
-    // 9) الإرسال الفردي (no-cors بدون انتظار رد)
-    // ============================================================
     function sendSingleWithTimeout(payload) {
         return new Promise(function (resolve) {
             try {
@@ -520,14 +459,11 @@
     function handleAttendanceSubmit(e) {
         e.preventDefault();
         if (!isEmpValid || !isGpsValid || isSending) return;
-
         isSending = true;
         submitBtn.disabled = true;
         submitBtn.textContent = "⏳ جاري الإرسال...";
         statusBox.style.display = 'none';
-
         var origin = navigator.onLine ? "متصل" : "غير متصل";
-
         var payload = {
             _uid: generateUid(),
             empId: empIdInput.value.trim(),
@@ -542,7 +478,6 @@
             deviceId: getDeviceId(),
             origin: origin
         };
-
         var afterResult = function (result) {
             if (result === 'success') {
                 incrementSentCount(1);
@@ -559,7 +494,6 @@
                 hideStatus(6000);
                 if (navigator.onLine) processBatchesInChunks();
             }
-
             empIdInput.value = '';
             empNameInput.value = '';
             msgDiv.textContent = '';
@@ -570,7 +504,6 @@
             updateUI();
             setTimeout(startGpsFetch, 800);
         };
-
         if (navigator.onLine) {
             sendSingleWithTimeout(payload).then(afterResult);
         } else {
@@ -578,13 +511,8 @@
         }
     }
 
-    // ============================================================
-    // 10) قائمة الأوفلاين
-    // ============================================================
     function saveToQueue(payload) {
-        if (!payload._uid) {
-            payload._uid = generateUid();
-        }
+        if (!payload._uid) payload._uid = generateUid();
         var q = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
         q.push(payload);
         localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
@@ -596,12 +524,8 @@
         catch (e) { return []; }
     }
 
-    // ============================================================
-    // 11) المزامنة الجماعية
-    // ============================================================
     function processBatchesInChunks() {
         if (!navigator.onLine) return Promise.resolve(false);
-
         if (processBatchesInChunks._running) {
             var now = Date.now();
             if (processBatchesInChunks._startTime && (now - processBatchesInChunks._startTime) > 60000) {
@@ -610,12 +534,9 @@
                 return Promise.resolve(false);
             }
         }
-
         processBatchesInChunks._running = true;
         processBatchesInChunks._startTime = Date.now();
-
         var totalSent = 0;
-
         function processNext() {
             var queue = getQueue();
             if (queue.length === 0) {
@@ -628,9 +549,7 @@
                 }
                 return Promise.resolve(true);
             }
-
             var chunk = queue.slice(0, CHUNK_SIZE);
-
             return new Promise(function (resolve) {
                 try {
                     fetch(SCRIPT_URL, {
@@ -666,7 +585,6 @@
                 return new Promise(function (r) { setTimeout(r, 800); }).then(processNext);
             });
         }
-
         return processNext();
     }
 
@@ -679,9 +597,19 @@
         }, 30000);
     }
 
-    // ============================================================
-    // 12) التشغيل
-    // ============================================================
+    var deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        var btn = document.getElementById('installBtn');
+        if (btn) btn.style.display = 'block';
+    });
+    window.addEventListener('appinstalled', function () {
+        deferredPrompt = null;
+        var btn = document.getElementById('installBtn');
+        if (btn) btn.style.display = 'none';
+    });
+
     function init() {
         try {
             empIdInput = document.getElementById('empId');
@@ -701,6 +629,22 @@
 
             empIdInput.addEventListener('input', handleEmpIdInput);
             document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+
+            var installBtn = document.getElementById('installBtn');
+            if (installBtn) {
+                installBtn.addEventListener('click', function () {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then(function () {
+                        deferredPrompt = null;
+                        installBtn.style.display = 'none';
+                    });
+                });
+            }
+
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                if (installBtn) installBtn.style.display = 'none';
+            }
 
             window.addEventListener('online', function () {
                 updateUI();
@@ -744,13 +688,6 @@
             scheduleSyncRetry();
         } catch (err) {
             console.error('Init error:', err);
-            try {
-                var input = document.getElementById('empId');
-                if (input) {
-                    input.disabled = false;
-                    input.readOnly = false;
-                }
-            } catch (e) {}
         }
     }
 
