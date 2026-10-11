@@ -298,7 +298,7 @@
                     gpsDisplay.style.color = "#b91c1c";
                     checkFormValidity();
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 60000, maximumAge: 0 }
             );
         } catch (e) { console.error('GPS:', e); }
     }
@@ -323,17 +323,16 @@
         setTimeout(function () { statusBox.style.display = 'none'; }, delay || 5000);
     }
 
-    // ✅ التعديل 2: updateLocalEmployeesCache مع فحص 24 ساعة
+    // ✅ updateLocalEmployeesCache مع فحص 24 ساعة
     function updateLocalEmployeesCache() {
         if (!navigator.onLine) return;
         
-        // ✅ فحص: هل مرّ 24 ساعة من آخر تحديث؟
         var lastUpdate = localStorage.getItem('emp_cache_last_update');
         var now = Date.now();
         var TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
         
         if (lastUpdate && (now - parseInt(lastUpdate, 10)) < TWENTY_FOUR_HOURS) {
-            return;  // ← حُمّل حديثاً → لا تحمّل
+            return;
         }
         
         fetchWithTimeout(SCRIPT_URL + "?action=getAllEmployees", {}, 15000)
@@ -398,7 +397,6 @@
                 msgDiv.className = "";
             }
 
-            // ✅ التعديل 3: Debounce 1000ms بدل 300ms
             debounceTimer = setTimeout(function () {
                 if (empIdInput.value.trim() !== val) return;
                 fetchEmployeeName(val, cacheHit, 1);
@@ -406,7 +404,7 @@
         } catch (e) { console.error('handleEmpIdInput:', e); }
     }
 
-    // ✅ بحث مع Retry تلقائي
+    // بحث مع Retry تلقائي
     function fetchEmployeeName(empId, cacheHit, attempt) {
         if (lastSearchController) {
             try { lastSearchController.abort(); } catch (e) {}
@@ -704,10 +702,8 @@
             empIdInput.addEventListener('input', handleEmpIdInput);
             document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
 
-            // ✅ التعديل 4: لا تحدّث الكاش عند عودة النت
             window.addEventListener('online', function () {
                 updateUI();
-                // updateLocalEmployeesCache(); ← تم حذفها
                 processBatchesInChunks();
             });
             window.addEventListener('offline', function () { updateUI(); });
