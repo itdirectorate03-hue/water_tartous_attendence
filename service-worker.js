@@ -1,6 +1,6 @@
-var CACHE_NAME = 'attendance-pwa-v4';
+var CACHE_NAME = 'attendance-pwa-v5';
 var CORE_ASSETS = ['./', './index.html'];
-var OPTIONAL_ASSETS = ['./manifest.json', './icon.svg'];
+var OPTIONAL_ASSETS = ['./manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
@@ -33,7 +33,6 @@ self.addEventListener('fetch', function (e) {
       req.url.indexOf('googleusercontent.com') !== -1 ||
       req.url.indexOf('googleapis.com') !== -1) return;
 
-  // للصفحة الرئيسية: Network-First
   if (req.mode === 'navigate' || req.destination === 'document') {
     e.respondWith(
       fetch(req).then(function (res) {
@@ -49,7 +48,6 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  // لبقية الملفات: Cache-First
   e.respondWith(
     caches.match(req).then(function (cached) {
       if (cached) return cached;
