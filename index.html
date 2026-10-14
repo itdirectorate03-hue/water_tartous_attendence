@@ -769,10 +769,16 @@
             updateLocalEmployeesCache();
             updateUI();
 
+            // ✅ رسالة البصمات المعلقة — تتغير حسب حالة الاتصال
             var pendingOnLoad = getQueue().length;
             if (pendingOnLoad > 0) {
-                showStatus("⏳ لديك " + pendingOnLoad + " بصمة معلقة، جاري محاولة الإرسال...", "warning");
+                if (navigator.onLine) {
+                    showStatus("⏳ لديك " + pendingOnLoad + " بصمة معلقة، جاري محاولة الإرسال...", "warning");
+                } else {
+                    showStatus("📴 لديك " + pendingOnLoad + " بصمة معلقة — سيتم إرسالها عند توفر الإنترنت", "warning");
+                }
             }
+
             if (navigator.onLine) {
                 processBatchesInChunks();
                 fetchWithTimeout(SCRIPT_URL + "?action=ping", {}, 5000).catch(function () {});
