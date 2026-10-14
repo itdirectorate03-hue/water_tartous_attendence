@@ -498,22 +498,47 @@
     }
 
     // ============================================================
-    // 9) الإرسال الفردي (no-cors بدون انتظار رد)
+    // 9) الإرسال الفردي — مع AbortController (30 ثانية)
     // ============================================================
     function sendSingleWithTimeout(payload) {
         return new Promise(function (resolve) {
+            var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var done = false;
+
+            // ✅ Timeout حقيقي: 30 ثانية
+            var timer = setTimeout(function () {
+                if (!done) {
+                    done = true;
+                    if (controller) { try { controller.abort(); } catch (e) {} }
+                    resolve('offline');
+                }
+            }, 30000);
+
+            var opts = {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(payload)
+            };
+            if (controller) opts.signal = controller.signal;
+
             try {
-                fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    body: JSON.stringify(payload)
-                }).then(function () {
+                fetch(SCRIPT_URL, opts).then(function () {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
                     setTimeout(function () { resolve('success'); }, 1200);
                 }).catch(function () {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
                     resolve('offline');
                 });
             } catch (e) {
-                resolve('offline');
+                if (!done) {
+                    done = true;
+                    clearTimeout(timer);
+                    resolve('offline');
+                }
             }
         });
     }
@@ -550,13 +575,11 @@
                 showStatus("✅ تم تسجيل الحضور بنجاح", "success");
                 hideStatus(5000);
             } else {
-                // ✅ التعديل: تغيير الحالة إلى "غير متصل" قبل الحفظ في queue
+                // ✅ تغيير الحالة إلى "غير متصل" قبل الحفظ في queue
                 payload.origin = "غير متصل";
                 saveToQueue(payload);
                 showStatus(
-                    navigator.onLine
-                        ? "⏱️ انتهت 30 ثانية دون رد — تم حفظ البصمة وسيتم إرسالها تلقائياً عند توفر الشبكة"
-                        : "📴 لا يوجد إنترنت — تم حفظ البصمة وسيتم إرسالها تلقائياً عند توفر الشبكة",
+                    "⚠️ تعذر إرسال البصمة — تم حفظها وسيتم إرسالها تلقائياً عند توفر الإنترنت",
                     "warning"
                 );
                 hideStatus(6000);
