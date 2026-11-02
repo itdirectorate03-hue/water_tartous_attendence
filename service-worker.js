@@ -1,4 +1,4 @@
-var CACHE_NAME = 'attendance-pwa-v8';
+var CACHE_NAME = 'attendence-pwa-v8';
 var CORE_ASSETS = ['./', './index.html'];
 var OPTIONAL_ASSETS = ['./manifest.json', './icon.svg', './icon-192.png', './icon-512.png'];
 
